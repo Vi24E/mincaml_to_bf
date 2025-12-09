@@ -1,0 +1,130 @@
+    Checking mincaml_to_bf v0.1.0 (/Users/koharayu/Desktop/大学/cpu実験/mincaml_to_bf)
+error[E0425]: cannot find value `var_map` in this scope
+   --> src/intermediate.rs:385:43
+    |
+385 |         map_args(&current_func_name, &mut var_map, &mut current_var_count);
+    |                                           ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `var_map` in this scope
+   --> src/intermediate.rs:398:51
+    |
+398 |                 map_args(&current_func_name, &mut var_map, &mut current_var_count);
+    |                                                   ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `var_map` in this scope
+   --> src/intermediate.rs:400:44
+    |
+400 |             collect_vars(&block.term, &mut var_map, &mut current_var_count);
+    |                                            ^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `var_map` in this scope
+   --> src/intermediate.rs:411:9
+    |
+411 |         var_map,
+    |         ^^^^^^^ not found in this scope
+
+error[E0599]: no method named `convert_atom` found for mutable reference `&mut intermediate::Converter` in the current scope
+   --> src/intermediate.rs:140:33
+    |
+140 |                 let atom = self.convert_atom(e1);
+    |                                 ^^^^^^^^^^^^
+    |
+help: there is a method `convert_term` with a similar name, but with different arguments
+   --> src/intermediate.rs:85:5
+    |
+85  | /     fn convert_term(
+86  | |         &mut self,
+87  | |         term: &BlockedTerm,
+88  | |         dest: Option<(id::T, Type)>,
+89  | |         next: Option<id::L>,
+90  | |     ) -> Term {
+    | |_____________^
+
+error[E0599]: no variant or associated item named `CallCls` found for enum `blocked::Term` in the current scope
+   --> src/intermediate.rs:272:26
+    |
+272 |             BlockedTerm::CallCls(x) => Some(Call::CallCls(x.clone())),
+    |                          ^^^^^^^ variant or associated item not found in `Term`
+    |
+   ::: src/blocked.rs:14:1
+    |
+14  | pub enum Term {
+    | ------------- variant or associated item `CallCls` not found for this enum
+
+error[E0599]: no variant or associated item named `CallCls` found for enum `Call` in the current scope
+   --> src/intermediate.rs:272:51
+    |
+45  | pub enum Call {
+    | ------------- variant or associated item `CallCls` not found for this enum
+...
+272 |             BlockedTerm::CallCls(x) => Some(Call::CallCls(x.clone())),
+    |                                                   ^^^^^^^ variant or associated item not found in `Call`
+
+error[E0308]: mismatched types
+   --> src/intermediate.rs:432:26
+    |
+432 |             collect_vars(e, map, count); // Recurse on 'e'
+    |             ------------ ^ expected `&Term`, found `&Call`
+    |             |
+    |             arguments to this function are incorrect
+    |
+    = note: expected reference `&intermediate::Term`
+               found reference `&Call`
+note: function defined here
+   --> src/intermediate.rs:418:4
+    |
+418 | fn collect_vars(term: &Term, map: &mut HashMap<id::T, usize>, count: &mut usize) {
+    |    ^^^^^^^^^^^^ -----------
+
+warning: unused variable: `wrapper_body`
+   --> src/blocked.rs:368:13
+    |
+368 |         let wrapper_body = Term::TailCallBlock(fundef.name.0.clone());
+    |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_wrapper_body`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `arg`
+   --> src/blocked.rs:387:14
+    |
+387 |         for (arg, ty) in &fundef_args {
+    |              ^^^ help: if this is intentional, prefix it with an underscore: `_arg`
+
+warning: unused variable: `fv`
+   --> src/blocked.rs:394:14
+    |
+394 |         for (fv, ty) in &fundef.formal_fv {
+    |              ^^ help: if this is intentional, prefix it with an underscore: `_fv`
+
+warning: unused variable: `e1`
+   --> src/k_normal.rs:101:28
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                            ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(_e1, e2) | syntax::Syntax::LE(_e1, e2) => g(
+    |                            +                             +
+
+warning: unused variable: `e2`
+   --> src/k_normal.rs:101:32
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                                ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(e1, _e2) | syntax::Syntax::LE(e1, _e2) => g(
+    |                                +                             +
+
+warning: unused variable: `args`
+   --> src/k_normal.rs:209:25
+    |
+209 |                     let args: Vec<id::T> = Vec::new();
+    |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_args`
+
+Some errors have detailed explanations: E0308, E0425, E0599.
+For more information about an error, try `rustc --explain E0308`.
+warning: `mincaml_to_bf` (bin "mincaml_to_bf") generated 6 warnings
+error: could not compile `mincaml_to_bf` (bin "mincaml_to_bf") due to 8 previous errors; 6 warnings emitted

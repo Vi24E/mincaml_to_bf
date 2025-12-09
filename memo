@@ -1,0 +1,18 @@
+memory:
+[enable_block[block_size + 1]][vars[var_size]][stack[frame_size * stack_size]]
+
+code
+>>>...>>>+[<<<...<<<[...]>[...]>[...]...]
+
+enable_block: 
+実行するブロック、実行するもののみ1にすることで、ブロック内に入る
+最後のブロックはブロック全体に対応している
+
+vars: 
+それぞれの変数を保存する、32bitのためそれぞれの変数の保存方法に注意
+
+stack:
+スタックを保存する、スタックフレームを保存する
+スタックフレームは、[0][used1][stack1][used2][stack2]のように保存する
+アクセス時はused1が1である限り右に進んでいけば良い、stackのサイズは63とする
+(つまりframe_size = 64)
