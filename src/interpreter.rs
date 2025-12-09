@@ -36,16 +36,39 @@ impl Machine {
             return Err("Unmatched '['".to_string());
         }
 
-        let mut ticks = 0;
-        let max_ticks = 100_000_000;
+        let mut instructions_count = 0;
 
         while pc < code_chars.len() {
-            ticks += 1;
-            if ticks > max_ticks {
-                return Err("Timeout".to_string());
+            instructions_count += 1;
+            if instructions_count >= 25_000_000 {
+                // Dump active blocks before timeout
+                if instructions_count % 5_000_000 == 0 {
+                    /*
+                    print!("Step {}: Active Blocks: ", instructions_count);
+                    for i in 1..10 { // Check first 10 block flags
+                        if self.memory[i] != 0 {
+                            print!("{} ", i);
+                        }
+                    }
+                    println!("");
+                    */
+                }
+                if instructions_count >= 50_000_000 {
+                    return Err("Timeout".to_string());
+                }
+            }
+            let command = code_chars[pc];
+
+            // Minimal Trace: Check if entering a block (heuristically)
+            // If command is '[' and ptr is in block_flag range (1..=10 for now) and memory[ptr] != 0
+            if command == '[' && self.ptr >= 1 && self.ptr <= 20 && self.memory[self.ptr] != 0 {
+                println!(
+                    "TRACE: Executing Block {} at step {}",
+                    self.ptr, instructions_count
+                );
             }
 
-            match code_chars[pc] {
+            match command {
                 '>' => {
                     self.ptr = (self.ptr + 1) % self.memory.len();
                 }

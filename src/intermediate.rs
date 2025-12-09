@@ -236,7 +236,12 @@ pub fn f(prog: &BlockedProg, closure_prog: &ClosureProg) -> Prog {
         converter.add_block(block.id.clone(), term);
     }
 
-    let layout = compute_layout(&converter.blocks, &func_arg_counts, closure_prog, &entry_label);
+    let layout = compute_layout(
+        &converter.blocks,
+        &func_arg_counts,
+        closure_prog,
+        &entry_label,
+    );
 
     // Resolve SetStack indices - Removed
     // for block in &mut converter.blocks {
@@ -267,12 +272,12 @@ fn compute_layout(
 ) -> Layout {
     let mut block_map = HashMap::new();
     let mut var_map = HashMap::new();
-    let mut block_count = 0;
+    let mut block_count = 1;
     let mut var_count = 0; // Max var count across all functions (for global stats, if needed)
     let mut frame_sizes = HashMap::new();
 
-    // Ensure entry block is index 0
-    block_map.insert(entry_label.clone(), 0);
+    // Ensure entry block is index 1
+    block_map.insert(entry_label.clone(), 1);
     block_count += 1;
 
     // Assign block IDs globally

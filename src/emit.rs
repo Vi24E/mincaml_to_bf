@@ -18,14 +18,25 @@ pub fn f(prog: &Prog) -> String {
     // [var_start..stack_start]: Variables
     // [stack_start..]: Stack
 
-    // bf_code.push_str("...");
-    bf_code.push_str("+>+");
-    current_ptr = 1;
+    // Initialize: Activate Entry Block (1) and Running Flag (0)
+    let running_flag = 0;
+
+    // Set Running Flag (0)
+    move_ptr(&mut bf_code, &mut current_ptr, running_flag);
+    bf_code.push('+');
+
+    // Set Entry Block Flag (1)
+    move_ptr(&mut bf_code, &mut current_ptr, 1);
+    bf_code.push('+');
+
+    // External Loop Start
+    bf_code.push('[');
 
     for (i, block) in prog.blocks.iter().enumerate() {
+        move_ptr(&mut bf_code, &mut current_ptr, (i + 1) as u32);
         bf_code.push_str("[-");
 
-        for op in &block.operations {
+        for op in &block.ops {
             match op {
                 Operation::SetImm(dest, val) => {
                     move_ptr(&mut bf_code, &mut current_ptr, *dest);
@@ -49,6 +60,7 @@ pub fn f(prog: &Prog) -> String {
                         buffer_start,
                         *dest,
                     );
+                    // clear_range(&mut bf_code, &mut current_ptr, reg_start, 128);
                 }
                 Operation::Add(dest, src1, src2) => {
                     copy(
@@ -83,22 +95,82 @@ pub fn f(prog: &Prog) -> String {
                         move_ptr(&mut bf_code, &mut current_ptr, reg_start + i);
                         bf_code.push(']');
                     }
+                    move_val(&mut bf_code, &mut current_ptr, reg_start + 32, *dest, 32);
+                    clear_range(&mut bf_code, &mut current_ptr, reg_start, 128);
+                }
+                Operation::Sub(dest, src1, src2) => {
                     copy(
                         &mut bf_code,
                         &mut current_ptr,
-                        reg_start + 32,
-                        *dest,
+                        *src1,
+                        reg_start,
                         buffer_start,
                         32,
                     );
-                }
-                Operation::Sub(dest, src1, src2) => {
-                    // DELETE
-                    // Add (dest, src1, neg(src2))
+                    move_ptr(&mut bf_code, &mut current_ptr, *src2);
+                    neg(
+                        &mut bf_code,
+                        &mut current_ptr,
+                        reg_start + 64,
+                        buffer_start,
+                        reg_start + 32,
+                    );
+                    for i in 0..32 {
+                        move_ptr(&mut bf_code, &mut current_ptr, reg_start + i);
+                        bf_code.push('[');
+                        bf_code.push('-');
+                        move_ptr(&mut bf_code, &mut current_ptr, reg_start + 32);
+                        add(
+                            &mut bf_code,
+                            &mut current_ptr,
+                            reg_start + 64,
+                            buffer_start,
+                            reg_start + 32,
+                            1 << i,
+                        );
+                        move_ptr(&mut bf_code, &mut current_ptr, reg_start + i);
+                        bf_code.push(']');
+                    }
+                    move_val(&mut bf_code, &mut current_ptr, reg_start + 32, *dest, 32);
+                    clear_range(&mut bf_code, &mut current_ptr, reg_start, 128);
                 }
                 Operation::SubZ(dest, src1, src2) => {
-                    // DELETE
-                    // maxzero(Add (dest, src1, neg(src2)))
+                    copy(
+                        &mut bf_code,
+                        &mut current_ptr,
+                        *src1,
+                        reg_start,
+                        buffer_start,
+                        32,
+                    );
+                    move_ptr(&mut bf_code, &mut current_ptr, *src2);
+                    neg(
+                        &mut bf_code,
+                        &mut current_ptr,
+                        reg_start + 64,
+                        buffer_start,
+                        reg_start + 32,
+                    );
+                    for i in 0..32 {
+                        move_ptr(&mut bf_code, &mut current_ptr, reg_start + i);
+                        bf_code.push('[');
+                        bf_code.push('-');
+                        move_ptr(&mut bf_code, &mut current_ptr, reg_start + 32);
+                        add(
+                            &mut bf_code,
+                            &mut current_ptr,
+                            reg_start + 64,
+                            buffer_start,
+                            reg_start + 32,
+                            1 << i,
+                        );
+                        move_ptr(&mut bf_code, &mut current_ptr, reg_start + i);
+                        bf_code.push(']');
+                    }
+                    move_ptr(&mut bf_code, &mut current_ptr, reg_start + 32);
+                    maxzero(&mut bf_code);
+                    move_val(&mut bf_code, &mut current_ptr, reg_start + 32, *dest, 32);
+                    clear_range(&mut bf_code, &mut current_ptr, reg_start, 128);
                 }
                 Operation::JumpIfZero(cond, l1, l2) => {
                     copy(
@@ -109,6 +181,7 @@ pub fn f(prog: &Prog) -> String {
                         buffer_start,
                         32,
                     );
+                    // clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start);
 
                     for _ in 0..31 {
@@ -119,18 +192,20 @@ pub fn f(prog: &Prog) -> String {
 
                     current_ptr += 31;
                     bf_code.push_str("[>+>+<<-]>>>+<[->-<]"); // 32 = pos, 34 = neg
+                    current_ptr += 2;
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 32);
                     bf_code.push_str("[-");
                     move_ptr(&mut bf_code, &mut current_ptr, *l1);
                     bf_code.push('+');
-                    move_ptr(&mut bf_code, &mut current_ptr, reg_start + 32);
+                    move_ptr(&mut bf_code, &mut current_ptr, reg_start + 31);
                     bf_code.push_str("]");
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 34);
                     bf_code.push_str("[-");
                     move_ptr(&mut bf_code, &mut current_ptr, *l2);
                     bf_code.push('+');
-                    move_ptr(&mut bf_code, &mut current_ptr, reg_start + 34);
+                    move_ptr(&mut bf_code, &mut current_ptr, reg_start + 31);
                     bf_code.push_str("]");
+                    // clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
                 }
                 Operation::Jump(target) => {
                     move_ptr(&mut bf_code, &mut current_ptr, *target);
@@ -148,37 +223,39 @@ pub fn f(prog: &Prog) -> String {
                 }
                 Operation::CallExternal(name) => {
                     if name == "halt" {
-                        move_ptr(&mut bf_code, &mut current_ptr, 0);
-                        bf_code.push('-');
-
+                        // Halt: Clear running flag
+                        move_ptr(&mut bf_code, &mut current_ptr, running_flag);
+                        bf_code.push_str("[-]");
+                        // clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
                     }
                     else {
                         panic!("CallExternal is not implemented");
                     }
                 }
                 Operation::InputByte(addr) => {
-                    // TODO: Implement InputByte
-                    // Read byte to *addr
-                    // bf_code.push_str("...");
+                    move_ptr(&mut bf_code, &mut current_ptr, *addr);
+                    bf_code.push(',');
                 }
                 Operation::OutputByte(addr) => {
-                    // TODO: Implement OutputByte
-                    // Write byte from *addr
-                    // bf_code.push_str("...");
+                    move_ptr(&mut bf_code, &mut current_ptr, *addr);
+                    bf_code.push('.');
                 }
             }
         }
-        
+
         move_ptr(&mut bf_code, &mut current_ptr, i as u32);
-        bf_code.push_str("]>");
+        bf_code.push(']');
     }
+    // Return to running flag for outer loop check
+    move_ptr(&mut bf_code, &mut current_ptr, running_flag);
+    bf_code.push(']');
 
     bf_code
 }
 
 #[allow(dead_code)]
 fn move_ptr(bf_code: &mut String, current_ptr: &mut u32, target_ptr: u32) {
-    println!("move_ptr: {} -> {}", *current_ptr, target_ptr);
+    // println!("move_ptr: {} -> {}", *current_ptr, target_ptr);
     if target_ptr > *current_ptr {
         for _ in 0..(target_ptr - *current_ptr) {
             bf_code.push('>');
@@ -189,6 +266,15 @@ fn move_ptr(bf_code: &mut String, current_ptr: &mut u32, target_ptr: u32) {
         }
     }
     *current_ptr = target_ptr;
+}
+
+// clear range [start, start + size)
+fn clear_range(bf_code: &mut String, current_ptr: &mut u32, start: u32, size: u32) {
+    move_ptr(bf_code, current_ptr, start);
+    for _ in 0..size {
+        bf_code.push_str("[-]>");
+        *current_ptr += 1;
+    }
 }
 
 // add n to current ptr
@@ -286,7 +372,8 @@ fn add(
     for _ in 0..33 {
         bf_code.push('<');
     }
-    copy(bf_code, current_ptr, register + 1, dest, buffer, 32);
+    move_val(bf_code, current_ptr, register + 1, dest, 32);
+    // clear_range(bf_code, current_ptr, register, 66); // DISABLED
 }
 
 // move value from source to dest (destroy source)

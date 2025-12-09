@@ -10,6 +10,7 @@ currently, float, tuple, array are not supported.
 ops (eg. Neg, Add, Sub) should first move data to register, then perform operation, then move data back to variable
 all operands u32 are pointer which points to the head-cell of variable
 */
+#[derive(Debug)]
 pub enum Operation {
     SetImm(u32, i32),          // x = i
     Neg(u32, u32),             // z = -x
@@ -24,13 +25,15 @@ pub enum Operation {
     OutputByte(u32),           // Write byte from address
 }
 
+#[derive(Debug)]
 pub struct Block {
-    pub operations: Vec<Operation>,
+    pub ops: Vec<Operation>,
 }
 
 use crate::intermediate::{self, Atom, Term};
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct Prog {
     pub blocks: Vec<Block>,
     pub block_count: usize,
@@ -104,7 +107,7 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
             var_start,
             stack_start,
         );
-        blocks.push(Block { operations: ops });
+        blocks.push(Block { ops: ops });
     }
 
     Prog::new(
@@ -249,6 +252,10 @@ fn convert_atom(
             // SetArgs returns Unit, so set dest to 0
             ops.push(Operation::SetImm(dest_addr, 0));
         }
+        Atom::Neg(x) => {
+            let src_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
+            ops.push(Operation::Neg(dest_addr, src_addr));
+        }
         _ => panic!("Unsupported atom: {:?}", atom),
     }
 }
@@ -279,7 +286,7 @@ impl fmt::Display for Operation {
 
 impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for op in &self.operations {
+        for op in &self.ops {
             writeln!(f, "  {}", op)?;
         }
         Ok(())
