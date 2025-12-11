@@ -232,6 +232,28 @@ h3 {
     display: block;
 }
 
+/* Activated Cells Layout */
+.mem-rows-container {
+    background-color: var(--panel-bg);
+    padding: 5px;
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+}
+
+.mem-row {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 2px;
+}
+
+.mem-row:last-child {
+    margin-bottom: 0;
+}
+
+.mem-row .mem-cell {
+    flex: 0 0 40px;
+}
+
 .mem-val {
     display: block;
 }

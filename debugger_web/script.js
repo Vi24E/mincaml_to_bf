@@ -177,6 +177,7 @@ function updateUI(data) {
     }
     
     // Render Memory
+    renderActivatedCells(document.getElementById('mem-activated'), data.memory.activated_cells, data.ptr);
     renderMemGrid(document.getElementById('mem-tape'), data.memory.local_tape, data.ptr);
     renderMemGrid(document.getElementById('mem-registers'), data.memory.registers, data.ptr);
     renderMemGrid(document.getElementById('mem-buffer'), data.memory.buffer, data.ptr);
@@ -238,6 +239,43 @@ function renderMemGrid(container, chunk, ptr) {
         `;
         container.appendChild(div);
     });
+}
+
+function renderActivatedCells(container, chunk, ptr) {
+    if (!chunk) {
+        container.innerHTML = '<div style="padding:10px; color:#666;">Not Available</div>';
+        return;
+    }
+
+    container.innerHTML = '';
+    
+    // Create two rows
+    const rowMain = document.createElement('div');
+    rowMain.className = 'mem-row';
+    const rowAux = document.createElement('div');
+    rowAux.className = 'mem-row';
+    
+    chunk.data.forEach((val, i) => {
+        const addr = chunk.start + i;
+        const div = document.createElement('div');
+        div.className = 'mem-cell';
+        if (val !== 0) div.classList.add('nonzero');
+        if (addr === ptr) div.classList.add('ptr');
+        
+        div.innerHTML = `
+            <span class="mem-idx">${addr}</span>
+            <span class="mem-val">${val}</span>
+        `;
+        
+        if (i % 2 === 0) {
+            rowMain.appendChild(div);
+        } else {
+            rowAux.appendChild(div);
+        }
+    });
+    
+    container.appendChild(rowMain);
+    container.appendChild(rowAux);
 }
 
 // Start

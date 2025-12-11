@@ -145,11 +145,17 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
         let mut ops = Vec::new();
 
         // If this is the entry block, init HP
+        // ERROR: reg_hp is not used in this compiler (CPS/Lambda Lifted), and its initialization
+        // was corrupting the buffer area (SetImm writes to buffer if reg_hp overlaps).
+        // Removed initialization.
+        /*
         if *block_map.get(&block.id).unwrap() == entry_idx {
-            let reg_hp = (reg_start + 120) as u32;
+            // reg_hp must not overlap with buffer (buffer is at reg_start + 96 .. reg_start + 128)
+            let reg_hp = (reg_start + 10) as u32;
             let heap_start_addr = (stack_start + 1024) as i32;
             ops.push(Operation::SetImm(reg_hp, heap_start_addr));
         }
+        */
 
         // The last variable slot is reserved for comparison temp
         // ...

@@ -30,6 +30,7 @@ pub fn compile(code: &str) -> Result<(String, Prog, Layout), String> {
     use std::io::Write;
     std::io::stderr().flush().unwrap();
     let virtual_prog = r#virtual::f(&intermediate_prog);
+    // println!("{}", virtual_prog.to_string());
     eprintln!(
         "DEBUG: Virtual Prog generated. Blocks: {}",
         virtual_prog.blocks.len()

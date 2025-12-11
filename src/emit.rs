@@ -236,10 +236,10 @@ pub fn f(prog: &Prog) -> String {
                     bf_code.push_str(
                         &(format!("\n# JumpVar Expected: {}\n", current_ptr).to_string()),
                     );
-                    
+
                     copy(&mut bf_code, &mut current_ptr, *src, reg_start + 35, buffer_start, 32); // reg[1] = *src
                     copy(&mut bf_code, &mut current_ptr, reg_start + 35, reg_start, buffer_start, 32); // reg[0] = reg[1]
-                    move_ptr(&mut bf_code, &mut current_ptr, reg_start); 
+                    move_ptr(&mut bf_code, &mut current_ptr, reg_start);
                     for _ in 0..31 {
                         bf_code.push_str("[->+<]>");
                     }
@@ -260,7 +260,8 @@ pub fn f(prog: &Prog) -> String {
                     current_ptr += 32;
                     bf_code.push_str("]");
                     move_ptr(&mut bf_code, &mut current_ptr, 2);
-                    bf_code.push_str(">[>>][-<<]"); // reset sub
+                    bf_code.push_str(">[>>]<<<+>[-<<]"); // reset sub
+                    current_ptr = 1;
                 }
                 Operation::MoveData(dest, src, size) => {
                     bf_code.push_str(
@@ -315,7 +316,7 @@ pub fn f(prog: &Prog) -> String {
             }
         }
 
-        move_ptr(&mut bf_code, &mut current_ptr, (i + 1) as u32);
+        move_ptr(&mut bf_code, &mut current_ptr, ((i + 1) * 2) as u32);
         bf_code.push(']');
     }
     // Return to running flag for outer loop check

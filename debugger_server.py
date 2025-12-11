@@ -97,7 +97,12 @@ class DebuggerHandler(http.server.SimpleHTTPRequestHandler):
                 # Let's add to root like variables
                 response['stack_values'] = DBG_INSTANCE.get_stack_values(limit=32)
 
-            response['memory'] = chunks
+            # 5. Activated Cells (Block Flags)
+            if DBG_INSTANCE.reg_start is not None:
+                chunks['activated_cells'] = {
+                    'start': 0,
+                    'data': DBG_INSTANCE.tape[0:DBG_INSTANCE.reg_start]
+                }
 
             response['memory'] = chunks
             

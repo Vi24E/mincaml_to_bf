@@ -114,6 +114,14 @@ impl Converter {
         match term {
             CpsTerm::Let((x, t), atom, e) => {
                 if let CpsAtom::MakeCls(cls) = atom {
+                    if cls.actual_fv.is_empty() {
+                        // Optimization: If no free variables, just load the label.
+                        // No Tuple allocation (Store) needed.
+                        let val = Term::LoadLabel(cls.entry.clone());
+                        let body = self.convert_term(e);
+                        return Term::Let((x.clone(), t.clone()), Box::new(val), Box::new(body));
+                    }
+
                     // MakeCls(cls) -> Tuple(cls.entry, cls.actual_fv...)
                     // We need to treat the entry label as an integer (block ID).
                     // This requires a way to get the block ID at runtime?
@@ -196,38 +204,20 @@ impl Converter {
                 self.convert_term(e)
             }
             CpsTerm::AppCls(f, args) => {
-                // f is the closure tuple (Entry, FVs...)
-                // 1. Get Entry: `entry = f[0]`
-                // 2. SetArgs(args..., f)  <-- Pass closure itself as Env
-                // 3. JumpDynamic(entry)
+                // Optimization: Assume `f` is a raw function pointer (Label Index), NOT a tuple.
+                // This assumes all closures are empty and we optimized MakeCls to LoadLabel.
 
-                let entry_var = id::gentmp(&Type::Int);
-                // Get(f, 0)
-                // We need `Let zero = Int(0)`.
-                let zero_var = id::gentmp(&Type::Int);
-                let let_zero = Term::Let(
-                    (zero_var.clone(), Type::Int),
-                    Box::new(Term::Int(0)),
-                    Box::new(Term::Let(
-                        (entry_var.clone(), Type::Int),
-                        Box::new(Term::Get(f.clone(), zero_var.clone())),
-                        Box::new(
-                            // SetArgs
-                            {
-                                let mut all_args = args.clone();
-                                all_args.push(f.clone()); // Pass the closure itself as the environment
-                                let set_args = Term::SetArgs(all_args);
+                // SetArgs(args..., f) <--- Pass f as Env (it's the integer label, but fine)
+                let mut all_args = args.clone();
+                all_args.push(f.clone()); // Pass the function ptr itself as environment
 
-                                // TailCallDynamic
-                                let call = Term::TailCallDynamic(entry_var.clone());
+                let set_args = Term::SetArgs(all_args);
 
-                                let dummy = id::gentmp(&Type::Unit);
-                                Term::Let((dummy, Type::Unit), Box::new(set_args), Box::new(call))
-                            },
-                        ),
-                    )),
-                );
-                let_zero
+                // TailCallDynamic(f) directly
+                let call = Term::TailCallDynamic(f.clone());
+
+                let dummy = id::gentmp(&Type::Unit);
+                Term::Let((dummy, Type::Unit), Box::new(set_args), Box::new(call))
             }
             CpsTerm::AppDir(l, args) => {
                 // AppDir can stay as is (TailCallBlock), or if we are consistent, we pass Env?
