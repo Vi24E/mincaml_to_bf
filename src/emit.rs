@@ -33,8 +33,8 @@ pub fn f(prog: &Prog) -> String {
     move_ptr(&mut bf_code, &mut current_ptr, running_flag);
     bf_code.push('+');
 
-    // Set Entry Block Flag (1)
-    move_ptr(&mut bf_code, &mut current_ptr, 1);
+    // Set Entry Block Flag (1 -> 2)
+    move_ptr(&mut bf_code, &mut current_ptr, 2);
     bf_code.push('+');
     move_ptr(&mut bf_code, &mut current_ptr, running_flag);
 
@@ -43,7 +43,7 @@ pub fn f(prog: &Prog) -> String {
 
     for (i, block) in prog.blocks.iter().enumerate() {
         bf_code.push_str(&(format!("\n# block {} Expected: {}\n", i, current_ptr).to_string()));
-        move_ptr(&mut bf_code, &mut current_ptr, (i + 1) as u32);
+        move_ptr(&mut bf_code, &mut current_ptr, ((i + 1) * 2) as u32);
         bf_code.push_str("[-");
 
         for op in &block.ops {
@@ -214,13 +214,13 @@ pub fn f(prog: &Prog) -> String {
                     current_ptr += 2;
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 33);
                     bf_code.push_str("[-");
-                    move_ptr(&mut bf_code, &mut current_ptr, *l2);
+                    move_ptr(&mut bf_code, &mut current_ptr, *l2 * 2);
                     bf_code.push('+');
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 33);
                     bf_code.push_str("]");
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 35);
                     bf_code.push_str("[-");
-                    move_ptr(&mut bf_code, &mut current_ptr, *l1);
+                    move_ptr(&mut bf_code, &mut current_ptr, *l1 * 2);
                     bf_code.push('+');
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 35);
                     bf_code.push_str("]");
@@ -229,13 +229,46 @@ pub fn f(prog: &Prog) -> String {
                 Operation::Jump(target) => {
                     bf_code
                         .push_str(&(format!("\n# Jump Expected: {}\n", current_ptr).to_string()));
-                    move_ptr(&mut bf_code, &mut current_ptr, *target);
+                    move_ptr(&mut bf_code, &mut current_ptr, *target * 2);
                     bf_code.push('+'); // activate block
+                }
+                Operation::JumpVar(src) => {
+                    bf_code.push_str(
+                        &(format!("\n# JumpVar Expected: {}\n", current_ptr).to_string()),
+                    );
+                    
+                    copy(&mut bf_code, &mut current_ptr, *src, reg_start + 35, buffer_start, 32); // reg[1] = *src
+                    copy(&mut bf_code, &mut current_ptr, reg_start + 35, reg_start, buffer_start, 32); // reg[0] = reg[1]
+                    move_ptr(&mut bf_code, &mut current_ptr, reg_start); 
+                    for _ in 0..31 {
+                        bf_code.push_str("[->+<]>");
+                    }
+                    bf_code.push_str("[[-]>+<]>"); // reg[0]' = (reg[0] != 0)
+                    current_ptr += 32;
+                    bf_code.push_str("[-"); // while reg[0]':
+                    move_ptr(&mut bf_code, &mut current_ptr, 2);
+                    bf_code.push_str(">[>>]+[<<]>");
+                    move_ptr(&mut bf_code, &mut current_ptr, reg_start + 35);
+                    add(&mut bf_code, &mut current_ptr, reg_start + 70, buffer_start, reg_start, 0xFFFFFFFF); // reg[0] = reg[1] - 1
+                    clear_range(&mut bf_code, &mut current_ptr, reg_start + 35, 32); // clear reg[1]
+                    copy(&mut bf_code, &mut current_ptr, reg_start, reg_start + 35, buffer_start, 32); // reg[1] = reg[0]
+                    move_ptr(&mut bf_code, &mut current_ptr, reg_start);
+                    for _ in 0..31 {
+                        bf_code.push_str("[->+<]>");
+                    }
+                    bf_code.push_str("[[-]>+<]>"); // reg[0]' = (reg[0] != 0)
+                    current_ptr += 32;
+                    bf_code.push_str("]");
+                    move_ptr(&mut bf_code, &mut current_ptr, 2);
+                    bf_code.push_str(">[>>][-<<]"); // reset sub
                 }
                 Operation::MoveData(dest, src, size) => {
                     bf_code.push_str(
                         &(format!("\n# MoveData Expected: {}\n", current_ptr).to_string()),
                     );
+                    if dest >= &stack_start {
+                        clear_range(&mut bf_code, &mut current_ptr, *dest, 32);
+                    }
                     copy(
                         &mut bf_code,
                         &mut current_ptr,
@@ -254,7 +287,8 @@ pub fn f(prog: &Prog) -> String {
                         move_ptr(&mut bf_code, &mut current_ptr, running_flag);
                         bf_code.push_str("[-]");
                         // clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
-                    } else {
+                    }
+                    else {
                         panic!("CallExternal is not implemented");
                     }
                 }
@@ -271,6 +305,12 @@ pub fn f(prog: &Prog) -> String {
                     );
                     move_ptr(&mut bf_code, &mut current_ptr, *addr);
                     bf_code.push('.');
+                }
+                Operation::Load(_, _) => {
+                    panic!("Load operations should be optimized away!");
+                }
+                Operation::Store(_, _) => {
+                    panic!("Store operations should be optimized away!");
                 }
             }
         }

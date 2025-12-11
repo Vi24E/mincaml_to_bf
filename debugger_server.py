@@ -83,6 +83,22 @@ class DebuggerHandler(http.server.SimpleHTTPRequestHandler):
                     'data': DBG_INSTANCE.tape[DBG_INSTANCE.buffer_start:DBG_INSTANCE.buffer_start + 32]
                 }
                 
+            # 4. Stack (if metadata)
+            # 4. Stack (if metadata)
+            if DBG_INSTANCE.stack_start is not None:
+                # Send raw chunk (optional, maybe frontend wants it?)
+                # And send parsed values
+                stack_size = 256
+                chunks['stack'] = {
+                    'start': DBG_INSTANCE.stack_start,
+                    'data': DBG_INSTANCE.tape[DBG_INSTANCE.stack_start:DBG_INSTANCE.stack_start + stack_size]
+                }
+                # Add parsed stack values to response root or under memory?
+                # Let's add to root like variables
+                response['stack_values'] = DBG_INSTANCE.get_stack_values(limit=32)
+
+            response['memory'] = chunks
+
             response['memory'] = chunks
             
             self.wfile.write(json.dumps(response).encode())
@@ -168,6 +184,19 @@ class DebuggerHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps({'status': 'ok'}).encode())
+            return
+        elif self.path == '/step_huge':
+            count = 100000
+            steps_done = 0
+            for _ in range(count):
+                if not DBG_INSTANCE.run_step():
+                    break
+                steps_done += 1
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'steps_executed': steps_done}).encode())
             return
         elif self.path == '/reset':
             # Reload file

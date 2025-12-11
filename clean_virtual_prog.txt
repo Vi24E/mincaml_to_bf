@@ -1,0 +1,222 @@
+DEBUG: Virtual Prog: Prog {
+    blocks: [
+        Block {
+            ops: [
+                SetImm(
+                    203,
+                    0,
+                ),
+                SetImm(
+                    235,
+                    10,
+                ),
+                MoveData(
+                    907,
+                    235,
+                    32,
+                ),
+                SetImm(
+                    939,
+                    2,
+                ),
+                SetImm(
+                    267,
+                    0,
+                ),
+                Jump(
+                    8,
+                ),
+            ],
+        },
+        Block {
+            ops: [
+                MoveData(
+                    139,
+                    907,
+                    32,
+                ),
+                MoveData(
+                    907,
+                    139,
+                    32,
+                ),
+                SetImm(
+                    171,
+                    0,
+                ),
+                CallExternal(
+                    "halt",
+                ),
+            ],
+        },
+        Block {
+            ops: [
+                MoveData(
+                    299,
+                    907,
+                    32,
+                ),
+                MoveData(
+                    907,
+                    299,
+                    32,
+                ),
+                SetImm(
+                    331,
+                    0,
+                ),
+                OutputByte(
+                    811,
+                ),
+            ],
+        },
+        Block {
+            ops: [
+                MoveData(
+                    363,
+                    907,
+                    32,
+                ),
+                MoveData(
+                    395,
+                    363,
+                    32,
+                ),
+                Add(
+                    427,
+                    523,
+                    395,
+                ),
+                MoveData(
+                    907,
+                    427,
+                    32,
+                ),
+                SetImm(
+                    459,
+                    0,
+                ),
+                Jump(
+                    3,
+                ),
+            ],
+        },
+        Block {
+            ops: [
+                MoveData(
+                    491,
+                    907,
+                    32,
+                ),
+                MoveData(
+                    523,
+                    491,
+                    32,
+                ),
+                SetImm(
+                    555,
+                    2,
+                ),
+                Sub(
+                    587,
+                    779,
+                    555,
+                ),
+                MoveData(
+                    907,
+                    587,
+                    32,
+                ),
+                SetImm(
+                    939,
+                    4,
+                ),
+                SetImm(
+                    619,
+                    0,
+                ),
+                Jump(
+                    8,
+                ),
+            ],
+        },
+        Block {
+            ops: [
+                MoveData(
+                    907,
+                    779,
+                    32,
+                ),
+                SetImm(
+                    651,
+                    0,
+                ),
+                Jump(
+                    3,
+                ),
+            ],
+        },
+        Block {
+            ops: [
+                SetImm(
+                    683,
+                    1,
+                ),
+                Sub(
+                    715,
+                    779,
+                    683,
+                ),
+                MoveData(
+                    907,
+                    715,
+                    32,
+                ),
+                SetImm(
+                    939,
+                    5,
+                ),
+                SetImm(
+                    747,
+                    0,
+                ),
+                Jump(
+                    8,
+                ),
+            ],
+        },
+        Block {
+            ops: [
+                MoveData(
+                    779,
+                    907,
+                    32,
+                ),
+                MoveData(
+                    811,
+                    939,
+                    32,
+                ),
+                SetImm(
+                    843,
+                    1,
+                ),
+                SubZ(
+                    875,
+                    779,
+                    843,
+                ),
+                JumpIfZero(
+                    875,
+                    6,
+                    7,
+                ),
+            ],
+        },
+    ],
+    block_count: 9,
+    var_count: 24,
+    reg_start: 10,
+    var_start: 139,
+    stack_start: 907,
+}

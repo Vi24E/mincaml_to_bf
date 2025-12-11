@@ -295,6 +295,46 @@ class Debugger:
             
         return variables
 
+    def get_stack_values(self, limit=32):
+        """
+        Parses 32-bit integer values from the stack.
+        Range: [self.stack_start, self.stack_start + limit * 32)
+        Format: 32 cells per value, little-endian.
+        """
+        if self.stack_start is None:
+            return []
+
+        stack_vals = []
+        # Limit number of items to scan to avoid huge payload
+        count = 0
+        current_addr = self.stack_start
+        
+        while count < limit:
+            # Check bounds
+            if current_addr + 32 > len(self.tape):
+                break
+                
+            bits = self.tape[current_addr : current_addr + 32]
+            value = 0
+            for i, bit in enumerate(bits):
+                if bit != 0:
+                    value |= (1 << i)
+            
+            # Handle 32-bit signed integer (Two's complement)
+            if value >= 2**31:
+                value -= 2**32
+
+            stack_vals.append({
+                'id': count,
+                'addr': current_addr,
+                'value': value
+            })
+            
+            current_addr += 32
+            count += 1
+            
+        return stack_vals
+
     def print_region(self, name, start_addr, count, cols=16):
         if start_addr is None:
             return

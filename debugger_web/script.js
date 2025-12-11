@@ -1,5 +1,6 @@
 const STATE = {
     isRunning: false,
+    isFastRunning: false,
     ops: [],
     runInterval: null
 };
@@ -30,7 +31,8 @@ function setupEvents() {
         fetchState();
     });
 
-    document.getElementById('btn-run').addEventListener('click', () => {toggleRun();});
+    document.getElementById('btn-run').addEventListener('click', () => {toggleRun(false);});
+    document.getElementById('btn-run-fast').addEventListener('click', () => {toggleRun(true);});
     document.getElementById('btn-reset').addEventListener('click', reset);
 }
 
@@ -53,6 +55,7 @@ async function fetchState(isInit = false) {
         if (isInit) {
             document.getElementById('reg-start-addr').textContent = data.reg_start !== null ? data.reg_start : 'None';
             document.getElementById('buf-start-addr').textContent = data.buffer_start !== null ? data.buffer_start : 'None';
+            document.getElementById('stack-start-addr').textContent = data.stack_start !== null ? data.stack_start : 'None';
             document.getElementById('var-start-addr').textContent = data.var_start !== null ? data.var_start : 'None';
         }
         
@@ -81,31 +84,56 @@ async function step(count = 1) {
     }
 }
 
-async function toggleRun() {
-    STATE.isRunning = !STATE.isRunning;
-    const btn = document.getElementById('btn-run');
-    
+async function toggleRun(fast = false) {
     if (STATE.isRunning) {
-        btn.textContent = "Pause";
-        btn.classList.add('active');
-        runLoop();
-    } else {
+        // Stop
+        STATE.isRunning = false;
+        STATE.isFastRunning = false;
+        
+        const btn = document.getElementById('btn-run');
+        const btnFast = document.getElementById('btn-run-fast');
+        
         btn.textContent = "Run";
         btn.classList.remove('active');
+        btnFast.textContent = "Fast Run";
+        btnFast.classList.remove('active');
+    } else {
+        // Start
+        STATE.isRunning = true;
+        STATE.isFastRunning = fast;
+        
+        const btn = fast ? document.getElementById('btn-run-fast') : document.getElementById('btn-run');
+        btn.textContent = "Pause";
+        btn.classList.add('active');
+        
+        runLoop();
     }
 }
 
 async function runLoop() {
     if (!STATE.isRunning) return;
     
-    // Execute a chunk of steps
-    const steps = await step(100); // 100 steps per frame
+    let steps = 0;
+    if (STATE.isFastRunning) {
+        // Fast mode: use /step_huge (100k steps)
+        try {
+            const res = await fetch('/step_huge', { method: 'POST' });
+            const data = await res.json();
+            steps = data.steps_executed;
+            await fetchState();
+        } catch (e) {
+            console.error("Fast step error", e);
+        }
+    } else {
+        // Normal mode: 100 steps
+        steps = await step(100); 
+    }
     
     if (steps > 0 && STATE.isRunning) {
         requestAnimationFrame(runLoop);
     } else {
         // Stop if finished or error
-        if (STATE.isRunning) toggleRun();
+        if (STATE.isRunning) toggleRun(false);
     }
 }
 
@@ -152,6 +180,7 @@ function updateUI(data) {
     renderMemGrid(document.getElementById('mem-tape'), data.memory.local_tape, data.ptr);
     renderMemGrid(document.getElementById('mem-registers'), data.memory.registers, data.ptr);
     renderMemGrid(document.getElementById('mem-buffer'), data.memory.buffer, data.ptr);
+    // renderMemGrid(document.getElementById('mem-stack'), data.memory.stack, data.ptr);
     
     // Context Display
     if (data.context) {
@@ -163,16 +192,26 @@ function updateUI(data) {
     if (data.variables) {
         renderVars(document.getElementById('mem-vars'), data.variables);
     }
+
+    // Stack Values
+    if (data.stack_values) {
+        // Reuse renderVars style but maybe specific container or reuse renderVars if format is same
+        // Stack values are list of {id, addr, value}, same as vars basically.
+        // Let's reuse renderVars but slightly modified or just use it.
+        // renderVars uses class 'var-item'. maybe we want 'stack-item'?
+        // The user just wants to see them.
+        renderVars(document.getElementById('mem-stack'), data.stack_values, "Stack");
+    }
 }
 
-function renderVars(container, vars) {
+function renderVars(container, vars, prefix = "Var") {
     container.innerHTML = '';
     const frag = document.createDocumentFragment();
     
     vars.forEach(v => {
         const div = document.createElement('div');
         div.className = 'var-item';
-        div.innerHTML = `<span class="var-id">Var ${v.id}</span>: <span class="var-val">${v.value}</span> <span class="var-addr">(@${v.addr})</span>`;
+        div.innerHTML = `<span class="var-id">${prefix} ${v.id}</span>: <span class="var-val">${v.value}</span> <span class="var-addr">(@${v.addr})</span>`;
         frag.appendChild(div);
     });
     container.appendChild(frag);

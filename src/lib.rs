@@ -26,8 +26,16 @@ pub fn compile(code: &str) -> Result<(String, Prog, Layout), String> {
     let cps_prog = cps::f(&closure_prog);
     let blocked_prog = blocked::f(&cps_prog);
     let intermediate_prog = intermediate::f(&blocked_prog, &closure_prog);
+    eprintln!("DEBUG: Intermediate Prog:\n{}", intermediate_prog);
+    use std::io::Write;
+    std::io::stderr().flush().unwrap();
     let virtual_prog = r#virtual::f(&intermediate_prog);
-    // println!("DEBUG: Virtual Prog: {:#?}", virtual_prog);
+    eprintln!(
+        "DEBUG: Virtual Prog generated. Blocks: {}",
+        virtual_prog.blocks.len()
+    );
+    eprintln!("DEBUG: Calling emit::f");
     let bf_code = emit::f(&virtual_prog);
+    eprintln!("DEBUG: Emit finished. Code length: {}", bf_code.len());
     Ok((bf_code, virtual_prog, intermediate_prog.layout))
 }

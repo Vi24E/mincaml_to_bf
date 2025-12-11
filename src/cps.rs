@@ -162,9 +162,9 @@ pub fn g(e: closure::Term, k: Box<dyn FnOnce(id::T) -> Term>) -> Term {
             let k_name = id::genid("k_if");
 
             let k_name1 = k_name.clone();
-            let e1_cps = g(*e1, Box::new(move |r| Term::AppCls(k_name1, vec![r])));
+            let e1_cps = g(*e1, Box::new(move |r| Term::AppDir(k_name1, vec![r])));
             let k_name2 = k_name.clone();
-            let e2_cps = g(*e2, Box::new(move |r| Term::AppCls(k_name2, vec![r])));
+            let e2_cps = g(*e2, Box::new(move |r| Term::AppDir(k_name2, vec![r])));
 
             let cont_fundef = Fundef {
                 name: (
@@ -186,9 +186,9 @@ pub fn g(e: closure::Term, k: Box<dyn FnOnce(id::T) -> Term>) -> Term {
             let k_name = id::genid("k_if");
 
             let k_name1 = k_name.clone();
-            let e1_cps = g(*e1, Box::new(move |r| Term::AppCls(k_name1, vec![r])));
+            let e1_cps = g(*e1, Box::new(move |r| Term::AppDir(k_name1, vec![r])));
             let k_name2 = k_name.clone();
-            let e2_cps = g(*e2, Box::new(move |r| Term::AppCls(k_name2, vec![r])));
+            let e2_cps = g(*e2, Box::new(move |r| Term::AppDir(k_name2, vec![r])));
 
             let cont_fundef = Fundef {
                 name: (

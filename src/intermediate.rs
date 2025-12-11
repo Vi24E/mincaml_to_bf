@@ -37,6 +37,7 @@ pub enum Atom {
     Get(id::T, id::T),
     Put(id::T, id::T, id::T),
     ExtArray(id::L),
+    LoadLabel(id::L), // Load label address (Block ID)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -47,7 +48,8 @@ pub enum Term {
     Let((id::T, Type), Atom, Box<Term>),
     // LetFuncall removed (only tail calls allowed)
     LetTuple(Vec<(id::T, Type)>, Atom, Box<Term>),
-    Jump(id::L), // Unconditional jump (Goto/TailCall)
+    Jump(id::L),    // Unconditional jump to Label
+    JumpVar(id::T), // Unconditional jump to Variable (Dynamic)
 }
 
 struct Converter {
@@ -107,17 +109,35 @@ impl Converter {
                 self.bind_atom(Atom::Put(x.clone(), y.clone(), z.clone()), dest, next)
             }
             BlockedTerm::ExtArray(x) => self.bind_atom(Atom::ExtArray(x.clone()), dest, next),
+            BlockedTerm::LoadLabel(l) => self.bind_atom(Atom::LoadLabel(l.clone()), dest, next),
 
             // CallCls and CallBlock are removed from blocked::Term
             // TailCallCls and TailCallBlock are the only calls
             BlockedTerm::TailCallCls(x) => {
-                // TailCallCls(x) -> Jump(x)
-                Term::Jump(x.clone())
+                // TailCallCls(x) -> JumpVar(x) because we treat x as a variable holding the target?
+                // Wait, blocked::TailCallCls(id::T) means x is a CLOSURE POINTER or CODE POINTER?
+                // In usual mincaml, Cls call means x is a closure.
+                // But blocked::TailCallCls fallback is used when we don't know the closure.
+                // So we assume x IS the code label? No.
+                // If x is a closure, we must extract code ptr.
+                // But `AppCls` handled that extraction!
+                // `AppCls` emits `TailCallDynamic(entry_var)`.
+                // So `TailCallCls` shouldn't appear if AppCls handled it?
+                // AppCls fallback (lines 178-183 in blocked.rs) emits `TailCallCls`.
+                // This fallback implies "Compiler couldn't optimize".
+                // If we implemented `TailCallDynamic`, we should use it in fallback too.
+                // But `convert_term` in blocked.rs is recursive.
+                // Let's assume TailCallCls is legacy/error now.
+                // But for safety, map it to JumpVar(x) assuming x is LABEL VARIABLE?
+                // Or Jump(Label(x))?
+                // id::T implies Variable.
+                Term::JumpVar(x.clone())
             }
             BlockedTerm::TailCallBlock(l) => {
                 // TailCallBlock(l) -> Jump(l)
                 Term::Jump(l.clone())
             }
+            BlockedTerm::TailCallDynamic(x) => Term::JumpVar(x.clone()),
 
             BlockedTerm::Goto(l) => Term::Jump(l.clone()),
 
@@ -207,6 +227,7 @@ impl Converter {
             BlockedTerm::Get(x, y) => Some(Atom::Get(x.clone(), y.clone())),
             BlockedTerm::Put(x, y, z) => Some(Atom::Put(x.clone(), y.clone(), z.clone())),
             BlockedTerm::ExtArray(x) => Some(Atom::ExtArray(x.clone())),
+            BlockedTerm::LoadLabel(l) => Some(Atom::LoadLabel(l.clone())),
             _ => None,
         }
     }
@@ -400,6 +421,7 @@ impl fmt::Display for Atom {
             Atom::Get(x, y) => write!(f, "{}[{}]", x, y),
             Atom::Put(x, y, z) => write!(f, "{}[{}] = {}", x, y, z),
             Atom::ExtArray(l) => write!(f, "ExtArray({})", l),
+            Atom::LoadLabel(l) => write!(f, "LoadLabel({})", l),
         }
     }
 }
@@ -420,6 +442,7 @@ impl fmt::Display for Term {
                 write!(f, "LetTuple ({}) = {} in\n{}", vars, a, e)
             }
             Term::Jump(c) => write!(f, "Jump({})", c),
+            Term::JumpVar(x) => write!(f, "JumpVar({})", x),
         }
     }
 }

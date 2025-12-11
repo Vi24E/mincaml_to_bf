@@ -14,6 +14,7 @@
             <h1>Brainfuck Debugger Web</h1>
             <div id="controls">
                 <button id="btn-run">Run</button>
+                <button id="btn-run-fast">Fast Run</button>
                 <button id="btn-step">Step</button>
                 <button id="btn-next-large">Next # (Large)</button>
                 <button id="btn-next-small">Next ## (Small)</button>
@@ -38,30 +39,37 @@
         <div id="memory-panel" class="panel">
             <h2>Memory</h2>
 
-            <div class="mem-section">
-                <h3>Registers (Start: <span id="reg-start-addr">-</span>)</h3>
-                <div id="mem-registers" class="mem-grid"></div>
-            </div>
+            <div id="memory-list" class="scrollable-content">
+                <div class="mem-section">
+                    <h3>Registers (Start: <span id="reg-start-addr">-</span>)</h3>
+                    <div id="mem-registers" class="mem-grid"></div>
+                </div>
 
-            <div class="mem-section">
-                <h3>Buffer (Start: <span id="buf-start-addr">-</span>)</h3>
-                <div id="mem-buffer" class="mem-grid"></div>
-            </div>
+                <div class="mem-section">
+                    <h3>Buffer (Start: <span id="buf-start-addr">-</span>)</h3>
+                    <div id="mem-buffer" class="mem-grid"></div>
+                </div>
 
-            <div class="mem-section">
-                <h3>Variables (Start: <span id="var-start-addr">-</span>)</h3>
-                <div id="mem-vars" class="var-list"></div>
-            </div>
+                <div class="mem-section">
+                    <h3>Stack (Start: <span id="stack-start-addr">-</span>)</h3>
+                    <div id="mem-stack" class="mem-grid"></div>
+                </div>
 
-            <div class="mem-section">
-                <h3>Tape (Local window around Ptr)</h3>
-                <div id="mem-tape" class="mem-grid"></div>
+                <div class="mem-section">
+                    <h3>Variables (Start: <span id="var-start-addr">-</span>)</h3>
+                    <div id="mem-vars" class="var-list"></div>
+                </div>
+
+                <div class="mem-section">
+                    <h3>Tape (Local window around Ptr)</h3>
+                    <div id="mem-tape" class="mem-grid"></div>
+                </div>
             </div>
         </div>
     </main>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=3"></script>
 </body>
 
 </html>

@@ -41,6 +41,8 @@ pub enum Term {
     // CallCls and CallBlock removed (only tail calls allowed)
     TailCallCls(id::T),
     TailCallBlock(id::L),
+    TailCallDynamic(id::T), // Call entry point stored in variable
+    LoadLabel(id::L),       // Load label address into variable
     SetArgs(Vec<id::T>),
     GetArg(usize),
     GetEnv(usize),
@@ -67,7 +69,8 @@ impl Term {
             Term::IfEq(_, _, e1, _) | Term::IfLE(_, _, e1, _) => e1.get_type(),
             Term::Let(_, _, e2) => e2.get_type(),
             Term::Var(_) => Type::Int,
-            Term::TailCallCls(_) | Term::TailCallBlock(_) => Type::Unit,
+            Term::TailCallCls(_) | Term::TailCallBlock(_) | Term::TailCallDynamic(_) => Type::Unit,
+            Term::LoadLabel(_) => Type::Int,
             Term::SetArgs(_) => Type::Unit,
             Term::GetArg(_) | Term::GetEnv(_) => Type::Int,
             Term::Tuple(_) => Type::Tuple(vec![]),
@@ -110,17 +113,45 @@ impl Converter {
     fn convert_term(&mut self, term: &CpsTerm) -> Term {
         match term {
             CpsTerm::Let((x, t), atom, e) => {
-                if let CpsAtom::MakeCls(_) = atom {
-                    // Lambda Lifting: Remove MakeCls.
-                    // The mapping is already in closure_map (scanned beforehand).
-                    // We just recurse.
-                    // We might need to bind x to Unit or something if it's used?
-                    // If it's used in CallCls, we use the map.
-                    // If it's used as a value (e.g. returned), we have a problem if we don't create it.
-                    // But for now, we assume it's only called.
-                    // Let's bind it to Unit to be safe and preserve structure.
+                if let CpsAtom::MakeCls(cls) = atom {
+                    // MakeCls(cls) -> Tuple(cls.entry, cls.actual_fv...)
+                    // We need to treat the entry label as an integer (block ID).
+                    // This requires a way to get the block ID at runtime?
+                    // Or we assume `id::L` can be used as `id::T` if we map it?
+                    // `Tuple` expects `Vec<id::T>`.
+                    // We need to introduce a Let(entry_var, Int(label_id))?
+                    // But we don't know label_id here.
+                    // We can use Atom::Label(id::L)? `Tuple` only takes `id::T`.
+                    // Let's use `ExtArray` or similar hack? No.
+                    // We need `Atom::Label` or similar in `Term`.
+                    // Actually, `Atom::Int` takes `i32`.
+                    // We can rely on `intermediate` to resolve Label to Int?
+                    // But `Tuple` is `Vec<id::T>`. The elements must be variables.
+
+                    // So we must: `Let entry = Label(cls.entry)`. `Let closure = Tuple(entry, fvs)`.
+                    // Does `Term` have `Label`? No.
+                    // We need to add `Term::Label(id::L)` or `Atom::Label(id::L)`.
+                    // Let's convert it to `Term::Let((x, t), Atom::Tuple(..), ..)`.
+                    // But first we need a variable holding the label.
+
+                    let entry_var = id::gentmp(&Type::Int);
+                    let mut tuple_elems = vec![entry_var.clone()];
+                    tuple_elems.extend(cls.actual_fv.clone());
+
+                    // Recursive conversion of body
                     let body = self.convert_term(e);
-                    return Term::Let((x.clone(), t.clone()), Box::new(Term::Unit), Box::new(body));
+
+                    // Construct: Let entry = LoadLabel(entry_label); Let x = Tuple(entry, fvs); body
+                    let load_label = Term::Let(
+                        (entry_var.clone(), Type::Int),
+                        Box::new(Term::LoadLabel(cls.entry.clone())),
+                        Box::new(Term::Let(
+                            (x.clone(), t.clone()),
+                            Box::new(Term::Tuple(tuple_elems)),
+                            Box::new(body),
+                        )),
+                    );
+                    return load_label;
                 }
 
                 let val = self.convert_atom(atom, x, t);
@@ -165,25 +196,55 @@ impl Converter {
                 self.convert_term(e)
             }
             CpsTerm::AppCls(f, args) => {
-                // Lambda Lifting: Check if f is a known closure
-                if let Some((label, fvs)) = self.closure_map.get(f).cloned() {
-                    // SetArgs(args + fvs)
-                    let mut all_args = args.clone();
-                    all_args.extend(fvs);
+                // f is the closure tuple (Entry, FVs...)
+                // 1. Get Entry: `entry = f[0]`
+                // 2. SetArgs(args..., f)  <-- Pass closure itself as Env
+                // 3. JumpDynamic(entry)
 
-                    let set_args = Term::SetArgs(all_args);
-                    let call = Term::TailCallBlock(label);
-                    let dummy = id::gentmp(&Type::Unit);
-                    Term::Let((dummy, Type::Unit), Box::new(set_args), Box::new(call))
-                } else {
-                    // Unknown closure. Fallback to TailCallCls (or panic if strict).
-                    let set_args = Term::SetArgs(args.clone());
-                    let call = Term::TailCallCls(f.clone());
-                    let dummy = id::gentmp(&Type::Unit);
-                    Term::Let((dummy, Type::Unit), Box::new(set_args), Box::new(call))
-                }
+                let entry_var = id::gentmp(&Type::Int);
+                // Get(f, 0)
+                // We need `Let zero = Int(0)`.
+                let zero_var = id::gentmp(&Type::Int);
+                let let_zero = Term::Let(
+                    (zero_var.clone(), Type::Int),
+                    Box::new(Term::Int(0)),
+                    Box::new(Term::Let(
+                        (entry_var.clone(), Type::Int),
+                        Box::new(Term::Get(f.clone(), zero_var.clone())),
+                        Box::new(
+                            // SetArgs
+                            {
+                                let mut all_args = args.clone();
+                                all_args.push(f.clone()); // Pass the closure itself as the environment
+                                let set_args = Term::SetArgs(all_args);
+
+                                // TailCallDynamic
+                                let call = Term::TailCallDynamic(entry_var.clone());
+
+                                let dummy = id::gentmp(&Type::Unit);
+                                Term::Let((dummy, Type::Unit), Box::new(set_args), Box::new(call))
+                            },
+                        ),
+                    )),
+                );
+                let_zero
             }
             CpsTerm::AppDir(l, args) => {
+                // AppDir can stay as is (TailCallBlock), or if we are consistent, we pass Env?
+                // Known functions don't need Env if they don't use it.
+                // But `lambda lifting` in intermediate assumes Env is passed?
+                // If `intermediate` maps `GetEnv` to `GetStack`, then YES, we must pass Env.
+                // But for AppDir, `Env` is usually empty or not used?
+                // If the function was a closure but optimized to AppDir, it might still have free vars?
+                // CPS `AppDir` implies direct call. `scan_make_cls` found its FVs?
+                // If `mincaml` optimizes `AppCls` to `AppDir`, it means FVs are handled or empty?
+                // Usually `AppDir` is for top-level functions which have no FVs.
+                // So we don't need to pass Env.
+                // BUT `GetEnv` logic in `virtual` relies on Stack position.
+                // If `GetEnv` is used inside a function called via `AppDir`, it will read wrong stack!
+                // Wait, top-level functions don't use `GetEnv` because they have no free variables!
+                // So `AppDir` is safe without extra args.
+
                 let set_args = Term::SetArgs(args.clone());
                 let call = Term::TailCallBlock(l.clone());
                 let dummy = id::gentmp(&Type::Unit);
@@ -333,6 +394,8 @@ impl fmt::Display for Term {
             Term::Var(x) => write!(f, "{}", x),
             Term::TailCallCls(x) => write!(f, "TailCallCls({})", x),
             Term::TailCallBlock(l) => write!(f, "TailCallBlock({})", l),
+            Term::TailCallDynamic(x) => write!(f, "TailCallDynamic({})", x),
+            Term::LoadLabel(l) => write!(f, "LoadLabel({})", l),
             Term::SetArgs(xs) => {
                 let args_str = xs.join(", ");
                 write!(f, "SetArgs({})", args_str)
