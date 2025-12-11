@@ -72,6 +72,30 @@ fn test_arithmetic() {
 }
 
 #[test]
+fn test_subz_garbage() {
+    // Trigger SubZ with 10 - 5 (non-zero result)
+    let program = r#"
+    let x = 10 in
+    let y = 5 in
+    let result = if x = y then 100 else 200 in
+    result
+    "#;
+    run_test_case(program, "result", 200);
+}
+
+#[test]
+fn test_subz_zero_garbage() {
+    // Trigger SubZ with 5 - 5 (zero result)
+    let program = r#"
+    let x = 5 in
+    let y = 5 in
+    let result = if x = y then 100 else 200 in
+    result
+    "#;
+    run_test_case(program, "result", 100);
+}
+
+#[test]
 fn test_sub() {
     let code = "let x = 30 - 10 in x";
     run_test_case(code, "x", 20);
@@ -144,4 +168,156 @@ fn test_negative() {
     // run_test_case checks u32.
     // -5 as i32 is ...1111011 (2's complement)
     run_test_case(code, "x", (-5i32) as u32);
+}
+
+#[test]
+fn test_emit_subz_direct() {
+    use mincaml_to_bf::emit;
+    use mincaml_to_bf::r#virtual::{Block, Operation, Prog};
+
+    // Layout configuration
+    let block_count = 3;
+    let reg_start = 10;
+    let var_start = 300;
+    let stack_start = 1000;
+
+    // Addresses
+    let x_addr = (var_start) as u32;
+    let y_addr = (var_start + 32) as u32;
+    let z_addr = (reg_start) as u32; // Result of subtraction (Same as integration test)
+    let res_addr = (var_start + 96) as u32; // Final result indicator
+
+    let mut blocks = Vec::new();
+
+    // Block 1 (Entry)
+    blocks.push(Block {
+        ops: vec![
+            Operation::SetImm(x_addr, 10),
+            Operation::SetImm(y_addr, 5),
+            Operation::SubZ(z_addr, x_addr, y_addr), // 10 - 5 = 5 (NonZero)
+            Operation::JumpIfZero(z_addr, 2, 3),     // if 0 goto 2 else 3
+        ],
+    });
+
+    // Block 2 (Zero Case) - Should NOT be reached
+    blocks.push(Block {
+        ops: vec![
+            Operation::SetImm(res_addr, 100),
+            Operation::CallExternal("halt".to_string()),
+        ],
+    });
+
+    // Block 3 (NonZero Case) - Should be reached
+    blocks.push(Block {
+        ops: vec![
+            Operation::SetImm(res_addr, 200),
+            Operation::CallExternal("halt".to_string()),
+        ],
+    });
+
+    let prog = Prog {
+        blocks,
+        block_count,
+        var_count: 10,
+        reg_start,
+        var_start,
+        stack_start,
+    };
+
+    println!("DEBUG: Running test_emit_subz_direct");
+    let bf_code = emit::f(&prog);
+
+    // Run Machine
+    let mut machine = Machine::new(10000);
+    println!("DEBUG: Executing BF code");
+    machine.run(&bf_code).expect("Runtime error");
+
+    // Verify Result
+    let res_val = read_var(&machine, res_addr as usize);
+    println!("DEBUG: Result value: {}", res_val);
+    assert_eq!(res_val, 200, "Should take NonZero branch");
+
+    // Verify Garbage in Register Area
+    let mut garbage_found = false;
+    for i in 0..128 {
+        // Check register area
+        let addr = reg_start + i;
+        if machine.memory[addr] != 0 {
+            println!(
+                "GARBAGE at offset {} (addr {}): {}",
+                i, addr, machine.memory[addr]
+            );
+            garbage_found = true;
+        }
+    }
+    assert!(!garbage_found, "Garbage found in register area");
+}
+
+#[test]
+fn test_emit_subz_pure() {
+    use mincaml_to_bf::emit;
+    use mincaml_to_bf::r#virtual::{Block, Operation, Prog};
+
+    // Layout configuration
+    let block_count = 1;
+    let reg_start = 10;
+    let var_start = 300;
+    let stack_start = 1000;
+
+    // Addresses
+    let x_addr = (var_start) as u32;
+    let y_addr = (var_start + 32) as u32;
+    let z_addr = (reg_start) as u32; // Result of subtraction (Targeting reg_start)
+
+    let mut blocks = Vec::new();
+
+    // Block 1 (Entry)
+    blocks.push(Block {
+        ops: vec![
+            Operation::SetImm(x_addr, 10),
+            Operation::SetImm(y_addr, 5),
+            Operation::SubZ(z_addr, x_addr, y_addr), // 10 - 5 = 5
+            Operation::CallExternal("halt".to_string()),
+        ],
+    });
+
+    let prog = Prog {
+        blocks,
+        block_count,
+        var_count: 10,
+        reg_start,
+        var_start,
+        stack_start,
+    };
+
+    println!("DEBUG: Running test_emit_subz_pure");
+    let bf_code = emit::f(&prog);
+
+    // Run Machine
+    let mut machine = Machine::new(10000);
+    println!("DEBUG: Executing BF code");
+    machine.run(&bf_code).expect("Runtime error");
+
+    // Verify Result
+    let res_val = read_var(&machine, z_addr as usize);
+    println!("DEBUG: Result value: {}", res_val);
+    assert_eq!(res_val, 5, "SubZ(10, 5) should be 5");
+
+    // Verify Garbage in Register Area
+    // Skip z_addr (which is reg_start) because it holds the valid result
+    let mut garbage_found = false;
+    for i in 1..128 {
+        // Check register area from reg_start + 1
+        let addr = reg_start + i;
+        // Ignore known operands if they were in register area, but here x,y are in var_start.
+        // We only care about temp registers used by SubZ.
+        if machine.memory[addr] != 0 {
+            println!(
+                "GARBAGE at offset {} (addr {}): {}",
+                i, addr, machine.memory[addr]
+            );
+            garbage_found = true;
+        }
+    }
+    assert!(!garbage_found, "Garbage found in register area");
 }

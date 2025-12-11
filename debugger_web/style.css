@@ -1,0 +1,237 @@
+:root {
+    --bg-color: #1e1e1e;
+    --panel-bg: #252526;
+    --text-color: #d4d4d4;
+    --accent-color: #0e639c;
+    --highlight-color: #264f78;
+    --border-color: #3e3e42;
+    --pc-color: #c586c0;
+    /* Purple-ish */
+    --ptr-color: #4ec9b0;
+    /* Teal-ish */
+    --val-nonzero: #dcdcaa;
+    /* Yellow-ish */
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background-color: var(--panel-bg);
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+h1 {
+    font-size: 1.2rem;
+    margin: 0;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 5px 15px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.btn:hover {
+    filter: brightness(1.1);
+}
+
+.separator {
+    color: var(--border-color);
+}
+
+main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+    padding: 10px;
+    background-color: var(--bg-color);
+}
+
+.panel:last-child {
+    border-right: none;
+}
+
+h2 {
+    font-size: 1rem;
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+h3 {
+    font-size: 0.9rem;
+    margin: 10px 0 5px 0;
+    color: #9cdcfe;
+}
+
+/* Code List */
+.scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    background-color: var(--panel-bg);
+}
+
+.context-panel {
+    margin-left: 20px;
+    padding: 5px 10px;
+    background: #333;
+    border-radius: 4px;
+    border: 1px solid #444;
+}
+
+#context-display {
+    font-size: 0.9em;
+    color: #ddd;
+}
+
+#ctx-large {
+    color: #4CAF50;
+    /* Green */
+    font-weight: bold;
+}
+
+#ctx-small {
+    color: #2196F3;
+    /* Blue */
+    font-weight: bold;
+}
+
+#code-list {
+    display: flex;
+    flex-wrap: wrap;
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.2;
+    background: #1e1e1e;
+    padding: 5px;
+}
+
+.var-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #1e1e1e;
+    padding: 10px;
+}
+
+.var-item {
+    font-family: monospace;
+    font-size: 13px;
+    background: #333;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.var-id {
+    color: #888;
+    font-weight: bold;
+}
+
+.var-val {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.var-addr {
+    color: #555;
+    font-size: 0.8em;
+}
+
+/* The original font-family and line-height from #code-list were moved here due to the instruction's format. */
+/* If this was not intended, please clarify. */
+/*
+    font-family: 'Consolas', monospace;
+    line-height: 1.5;
+*/
+
+.code-item {
+    padding: 1px 3px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    border-radius: 2px;
+    margin: 1px;
+}
+
+.code-item.active {
+    background-color: var(--highlight-color);
+    color: white;
+    outline: 1px solid #4ec9b0;
+}
+
+.code-idx {
+    display: none;
+    /* Hide index in compact view to save space */
+}
+
+/* Memory Grid */
+.mem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 2px;
+    background-color: var(--panel-bg);
+    padding: 5px;
+    border: 1px solid var(--border-color);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.mem-cell {
+    border: 1px solid var(--border-color);
+    text-align: center;
+    padding: 2px;
+    font-size: 0.8rem;
+    position: relative;
+}
+
+.mem-cell.nonzero {
+    color: var(--val-nonzero);
+    font-weight: bold;
+}
+
+.mem-cell.ptr {
+    background-color: var(--ptr-color);
+    color: black !important;
+    font-weight: bold;
+}
+
+.mem-idx {
+    font-size: 0.6rem;
+    color: #666;
+    display: block;
+}
+
+.mem-val {
+    display: block;
+}

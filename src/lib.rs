@@ -27,7 +27,7 @@ pub fn compile(code: &str) -> Result<(String, Prog, Layout), String> {
     let blocked_prog = blocked::f(&cps_prog);
     let intermediate_prog = intermediate::f(&blocked_prog, &closure_prog);
     let virtual_prog = r#virtual::f(&intermediate_prog);
-    println!("DEBUG: Virtual Prog: {:#?}", virtual_prog);
+    // println!("DEBUG: Virtual Prog: {:#?}", virtual_prog);
     let bf_code = emit::f(&virtual_prog);
     Ok((bf_code, virtual_prog, intermediate_prog.layout))
 }

@@ -97,10 +97,18 @@ pub fn g(e: closure::Term, k: Box<dyn FnOnce(id::T) -> Term>) -> Term {
             Term::Let((z.clone(), Type::Float), Atom::FDiv(x, y), Box::new(k(z)))
         }
         closure::Term::Var(x) => k(x),
-        closure::Term::Let((x, t), e1, e2) => g(
-            *e1,
-            Box::new(move |y| Term::Let((x.clone(), t.clone()), Atom::Var(y), Box::new(g(*e2, k)))),
-        ),
+        closure::Term::Let((x, t), e1, e2) => {
+            if let Some(atom) = try_atomic(&e1) {
+                Term::Let((x.clone(), t.clone()), atom, Box::new(g(*e2, k)))
+            } else {
+                g(
+                    *e1,
+                    Box::new(move |y| {
+                        Term::Let((x.clone(), t.clone()), Atom::Var(y), Box::new(g(*e2, k)))
+                    }),
+                )
+            }
+        }
         closure::Term::MakeCls((x, t), cls, e) => Term::Let(
             (x.clone(), t.clone()),
             Atom::MakeCls(cls),
@@ -381,5 +389,27 @@ impl fmt::Display for Prog {
             )?;
         }
         write!(f, "{}", self.body)
+    }
+}
+
+fn try_atomic(e: &closure::Term) -> Option<Atom> {
+    match e {
+        closure::Term::Unit => Some(Atom::Unit),
+        closure::Term::Int(i) => Some(Atom::Int(*i)),
+        closure::Term::Float(d) => Some(Atom::Float(*d)),
+        closure::Term::Var(x) => Some(Atom::Var(x.clone())),
+        closure::Term::Neg(x) => Some(Atom::Neg(x.clone())),
+        closure::Term::Add(x, y) => Some(Atom::Add(x.clone(), y.clone())),
+        closure::Term::Sub(x, y) => Some(Atom::Sub(x.clone(), y.clone())),
+        closure::Term::FNeg(x) => Some(Atom::FNeg(x.clone())),
+        closure::Term::FAdd(x, y) => Some(Atom::FAdd(x.clone(), y.clone())),
+        closure::Term::FSub(x, y) => Some(Atom::FSub(x.clone(), y.clone())),
+        closure::Term::FMul(x, y) => Some(Atom::FMul(x.clone(), y.clone())),
+        closure::Term::FDiv(x, y) => Some(Atom::FDiv(x.clone(), y.clone())),
+        closure::Term::Get(x, y) => Some(Atom::Get(x.clone(), y.clone())),
+        closure::Term::Put(x, y, z) => Some(Atom::Put(x.clone(), y.clone(), z.clone())),
+        closure::Term::ExtArray(x) => Some(Atom::ExtArray(x.clone())),
+        closure::Term::Tuple(xs) => Some(Atom::Tuple(xs.clone())),
+        _ => None,
     }
 }

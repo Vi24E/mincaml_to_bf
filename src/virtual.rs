@@ -66,7 +66,7 @@ impl Prog {
 pub fn f(prog: &intermediate::Prog) -> Prog {
     let block_count = prog.layout.block_count;
     let var_count = prog.layout.var_count;
-    let reg_size = 256;
+    let reg_size = 128; // User requested reduction
 
     // Memory Layout Constants
     // [0 .. block_count] : Block Flags
@@ -98,6 +98,8 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
 
     for (_, block) in sorted_blocks {
         let mut ops = Vec::new();
+        // The last variable slot is reserved for comparison temp
+        let cmp_temp_addr = var_start + (var_count - 1) * 32;
         convert_term(
             &block.term,
             &mut ops,
@@ -106,6 +108,7 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
             reg_start,
             var_start,
             stack_start,
+            cmp_temp_addr,
         );
         blocks.push(Block { ops: ops });
     }
@@ -128,6 +131,7 @@ fn convert_term(
     reg_start: usize,
     var_start: usize,
     stack_start: usize,
+    cmp_temp_addr: usize,
 ) {
     match term {
         Term::Let((x, _), atom, e) => {
@@ -150,6 +154,7 @@ fn convert_term(
                 reg_start,
                 var_start,
                 stack_start,
+                cmp_temp_addr,
             );
         }
         Term::Jump(l) => {
@@ -172,8 +177,8 @@ fn convert_term(
             let idx_l1 = *block_map.get(l1).unwrap() as u32;
             let idx_l2 = *block_map.get(l2).unwrap() as u32;
 
-            // Use a temp register for comparison
-            let tmp_addr = reg_start as u32;
+            // Use reserved global temp variable for comparison to avoid collision
+            let tmp_addr = cmp_temp_addr as u32;
 
             // tmp = x - y
             ops.push(Operation::Sub(tmp_addr, addr_x, addr_y));
@@ -188,7 +193,7 @@ fn convert_term(
             let idx_l1 = *block_map.get(l1).unwrap() as u32;
             let idx_l2 = *block_map.get(l2).unwrap() as u32;
 
-            let tmp_addr = reg_start as u32;
+            let tmp_addr = cmp_temp_addr as u32;
 
             // tmp = max(0, x - y)
             // if x <= y, x - y <= 0, so max(0, x-y) == 0.

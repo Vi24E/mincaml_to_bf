@@ -326,7 +326,7 @@ fn compute_layout(
     }
     // Save last frame size
     frame_sizes.insert(current_func_name, current_var_count);
-    var_count = current_var_count; // Total count
+    var_count = current_var_count + 1; // Total count + 1 (reserved for global comparison temp)
 
     Layout {
         block_map,
