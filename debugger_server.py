@@ -198,6 +198,11 @@ class DebuggerHandler(http.server.SimpleHTTPRequestHandler):
                     break
                 steps_done += 1
             
+            # Align to next Large Tag (#) to ensure valid state (avoid stopping in middle of calculation)
+            # This makes Fast Run behavior consistent with Next # Large
+            if DBG_INSTANCE.pc < len(DBG_INSTANCE.ops):
+                DBG_INSTANCE.run_to_tag(1)
+            
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()

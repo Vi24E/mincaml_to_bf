@@ -188,77 +188,70 @@ pub fn g(
                 body_env.insert(arg.clone(), ty.clone());
             }
 
-            let known_prime = known.clone();
-            let e1_prime = g(&body_env, &known_prime, toplevel, &fundef.body);
-            let mut zs = fv(&e1_prime);
+            // Optimistic optimization: Assume x is known (AppDir)
+            let mut known_prime_opt = known.clone();
+            known_prime_opt.insert(x.clone());
 
+            let e1_prime_opt = g(&body_env, &known_prime_opt, toplevel, &fundef.body);
+            let mut zs = fv(&e1_prime_opt);
             zs.retain(|z| z != x);
             for (arg, _) in &fundef.args {
                 zs.retain(|z| z != arg);
             }
-            // If zs is empty, we can add it to toplevel and known
-            // But we need to check if it's actually empty.
-            // Also need to handle recursion correctly.
 
-            // For simplicity, we assume we can lift it if zs is empty or if we handle closure creation.
-            // min-caml logic:
-            // Check if free variables are empty. If so, add to known.
-            // If not, we must create a closure.
+            if zs.is_empty() {
+                // Success! Accessable as AppDir.
+                toplevel.borrow_mut().push(Fundef {
+                    name: (x.clone(), t.clone()),
+                    args: fundef.args.clone(),
+                    formal_fv: Vec::new(),
+                    body: e1_prime_opt,
+                });
 
-            // Wait, min-caml logic is slightly more complex with `toplevel_backup` etc.
-            // Let's implement a simplified version: always lift to toplevel, but if it has free vars, they become `formal_fv`.
-
-            let zs_vec: Vec<String> = zs.into_iter().collect();
-            // We need types for zs.
-            let mut zts = Vec::new();
-            for z in &zs_vec {
-                // z must be in env
-                // If not in env, it might be a global or bug.
-                // In min-caml, it assumes it's in env.
-                if let Some(t) = body_env.get(z) {
-                    zts.push((z.clone(), t.clone()));
-                } else {
-                    // Maybe external?
-                    // For now, panic or assume Int?
-                    // It should be in env if it's a free variable from outer scope.
-                    // If it's toplevel function, it might not be in env if we didn't add it?
-                    // But we added x to env.
-                    // Let's assume it's found.
-                    // println!("Warning: free variable {} not found in env", z);
-                    // Actually, if it's a recursive call to itself, it's in env.
-                    // If it calls another known function, it's in known, so not a free variable?
-                    // Wait, `fv` function treats `AppDir` as having free vars?
-                    // `AppDir` uses label, so it doesn't count as free variable `Var`.
-                    // So known functions are `AppDir` and don't contribute to `fv`.
-                }
-            }
-
-            // Add to toplevel
-            toplevel.borrow_mut().push(Fundef {
-                name: (x.clone(), t.clone()),
-                args: fundef.args.clone(),
-                formal_fv: zts.clone(),
-                body: e1_prime,
-            });
-
-            let e2_prime = g(&new_env, &known_prime, toplevel, e2);
-
-            // Check if x appears in e2_prime as a variable (not just AppDir)
-            // If it appears as Var(x), we need MakeCls.
-            // If it only appears in AppDir(x, ...), we don't need MakeCls.
-            // But `fv` returns x if it's used as Var.
-
-            if fv(&e2_prime).contains(x) {
-                Term::MakeCls(
-                    (x.clone(), t.clone()),
-                    Closure {
-                        entry: x.clone(),
-                        actual_fv: zs_vec,
-                    },
-                    Box::new(e2_prime),
-                )
+                // Also optimizable in e2
+                let mut known_for_e2 = known.clone();
+                known_for_e2.insert(x.clone());
+                g(env, &known_for_e2, toplevel, e2) // No MakeCls needed
             } else {
-                e2_prime
+                // Failure. Must be closure.
+                // Re-process e1 without x in known.
+                let known_prime = known.clone();
+                let e1_prime = g(&body_env, &known_prime, toplevel, &fundef.body);
+
+                let mut zs = fv(&e1_prime);
+                zs.retain(|z| z != x);
+                for (arg, _) in &fundef.args {
+                    zs.retain(|z| z != arg);
+                }
+
+                let zs_vec: Vec<String> = zs.into_iter().collect();
+                let mut zts = Vec::new();
+                for z in &zs_vec {
+                    if let Some(t) = body_env.get(z) {
+                        zts.push((z.clone(), t.clone()));
+                    }
+                }
+
+                toplevel.borrow_mut().push(Fundef {
+                    name: (x.clone(), t.clone()),
+                    args: fundef.args.clone(),
+                    formal_fv: zts.clone(),
+                    body: e1_prime,
+                });
+
+                let e2_prime = g(env, known, toplevel, e2);
+                if fv(&e2_prime).contains(x) {
+                    Term::MakeCls(
+                        (x.clone(), t.clone()),
+                        Closure {
+                            entry: x.clone(),
+                            actual_fv: zs_vec,
+                        },
+                        Box::new(e2_prime),
+                    )
+                } else {
+                    e2_prime
+                }
             }
         }
         KNormal::App(x, ys) => {

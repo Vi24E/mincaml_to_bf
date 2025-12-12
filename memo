@@ -16,3 +16,70 @@ stack:
 スタックフレームは、[0][used1][stack1][used2][stack2]のように保存する
 アクセス時はused1が1である限り右に進んでいけば良い、stackのサイズは63とする
 (つまりframe_size = 64)
+
+```ocaml
+let rec fib n =
+  if n <= 1 then n
+  else fib (n - 1) + fib (n - 2)
+in
+let x = fib 10 in
+print_int x
+```
+
+```ocaml
+let rec fib n k =
+  if n <= 1 then k n
+  else fib (n - 1) (fun x ->
+	fib (n - 2) (
+		fun y -> k (x + y)
+	)
+  )
+in fib 10 (fun x -> print_int x)
+```
+
+```ocaml
+let rec fib n k =
+  if n <= 1 then k n
+  else let rec f x =
+	let rec g y = k (x + y) in
+	fib (n - 2) g
+  in
+  fib (n - 1) f
+in fib 10 (fun x -> print_int x)
+```
+
+```ocaml
+let rec g k x y = 
+  k (x + y)
+in
+let rec f k n x =
+  fib (n - 2) (g k x)
+in
+let rec fib n k =
+  if n <= 1 then k n 
+  else fib (n - 1) (f k n)
+in fib 10 (fun x -> print_int x)
+```
+
+fib 3 k
+(3 k) fib
+(k 3 2 f) fib
+(k 3 k 2 1 f) fib
+(k 3 k 2 1) f
+(k 3 k 1 g 0) fib
+(k 3 k 1 0) g
+
+LoadとStoreがコードに含まれています。これは期待するべき動作ではありません。
+
+let rec g k x y = 
+  k (x + y)
+in
+let rec f k n x =
+  fib (n - 2) (g k x)
+in
+let rec fib n k =
+  if n <= 1 then k n 
+  else fib (n - 1) (f k n)
+in fib 10 (fun x -> print_int x)
+のようにCPS変換+lambda lifting
+

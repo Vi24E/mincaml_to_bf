@@ -48,6 +48,107 @@ pub fn f(prog: &Prog) -> String {
 
         for op in &block.ops {
             match op {
+                Operation::Push(src) => {
+                    bf_code
+                        .push_str(&(format!("\n# Push Expected: {}\n", current_ptr).to_string()));
+                    copy(
+                        &mut bf_code,
+                        &mut current_ptr,
+                        *src,
+                        stack_start,
+                        buffer_start,
+                        32,
+                    );
+                    move_ptr(&mut bf_code, &mut current_ptr, stack_start);
+                    /*
+                    3 bit push
+                     +>>+
+                     << // data
+                     [->>> >>>>[>>>>]<<<+<[<<<<]<<<]
+                     >[->> >>>>[>>>>]<<+<<[<<<<]<<]
+                     >[-> >>>>[>>>>]<+<<<[<<<<]<]
+                     > >>>>[>>>>]+[<<<<]
+                     <<< // push
+
+                     +>+>
+                     << // data
+                     [->>> >>>>[>>>>]<<<+<[<<<<]<<<]
+                     >[->> >>>>[>>>>]<<+<<[<<<<]<<]
+                     >[-> >>>>[>>>>]<+<<<[<<<<]<]
+                     > >>>>[>>>>]+[<<<<]
+                     <<< // push
+                     */
+                    for i in 0..32 {
+                        bf_code.push_str("[-");
+                        bf_code.push_str(&">".to_string().repeat(33 - i));
+                        bf_code.push_str(&">".to_string().repeat(33));
+                        bf_code.push('[');
+                        bf_code.push_str(&">".to_string().repeat(33));
+                        bf_code.push(']');
+                        bf_code.push_str(&"<".to_string().repeat(33 - i));
+                        bf_code.push('+');
+                        bf_code.push_str(&"<".to_string().repeat(i));
+                        bf_code.push('[');
+                        bf_code.push_str(&"<".to_string().repeat(33));
+                        bf_code.push(']');
+                        bf_code.push_str(&"<".to_string().repeat(33 - i));
+                        bf_code.push_str("]>");
+                    }
+                    bf_code.push_str(&">".to_string().repeat(33));
+                    bf_code.push('[');
+                    bf_code.push_str(&">".to_string().repeat(33));
+                    bf_code.push(']');
+                    bf_code.push('+');
+                    bf_code.push('[');
+                    bf_code.push_str(&"<".to_string().repeat(33));
+                    bf_code.push(']');
+                    bf_code.push_str(&"<".to_string().repeat(32));
+                }
+                Operation::Pop(dest) => {
+                    /*
+                    3 bit pop
+                    >>> >>>>[>>>>]<<<< <<< // move to last
+                    [->>>[<<<<]<<<+>>> >>>>[>>>>]<<< <<<<]
+                    >[->>[<<<<]<<+>> >>>>[>>>>]<< <<<<]
+                    >[->[<<<<]<+> >>>>[>>>>]< <<<<]
+                    >-<<<<[<<<<]<<< // used bit; pop complete
+                     */
+
+                    bf_code.push_str(&(format!("\n# Pop Expected: {}\n", current_ptr).to_string()));
+                    move_ptr(&mut bf_code, &mut current_ptr, stack_start);
+
+                    bf_code.push_str(&">".to_string().repeat(32));
+                    bf_code.push_str(&">".to_string().repeat(33));
+                    bf_code.push('[');
+                    bf_code.push_str(&">".to_string().repeat(33));
+                    bf_code.push(']');
+                    bf_code.push_str(&">".to_string().repeat(33));
+                    bf_code.push_str(&">".to_string().repeat(32));
+                    for i in 0..32 {
+                        bf_code.push_str("[-");
+                        bf_code.push_str(&">".to_string().repeat(33 - i));
+                        bf_code.push('[');
+                        bf_code.push_str(&"<".to_string().repeat(33));
+                        bf_code.push(']');
+                        bf_code.push_str(&"<".to_string().repeat(33 - i));
+                        bf_code.push('+');
+                        bf_code.push_str(&">".to_string().repeat(33 - i));
+                        bf_code.push_str(&">".to_string().repeat(33));
+                        bf_code.push('[');
+                        bf_code.push_str(&">".to_string().repeat(33));
+                        bf_code.push(']');
+                        bf_code.push_str(&"<".to_string().repeat(33 - i));
+                        bf_code.push_str(&"<".to_string().repeat(33));
+                        bf_code.push_str("]>");
+                    }
+                    bf_code.push('-');
+                    bf_code.push_str(&"<".to_string().repeat(33));
+                    bf_code.push('[');
+                    bf_code.push_str(&"<".to_string().repeat(33));
+                    bf_code.push(']');
+                    bf_code.push_str(&"<".to_string().repeat(32));
+                    copy(&mut bf_code, &mut current_ptr, stack_start, *dest, buffer_start, 32);
+                }
                 Operation::SetImm(dest, val) => {
                     bf_code
                         .push_str(&(format!("\n# SetImm Expected: {}\n", current_ptr).to_string()));
@@ -193,6 +294,7 @@ pub fn f(prog: &Prog) -> String {
                     bf_code.push_str(
                         &(format!("\n# JumpIfZero Expected: {}\n", current_ptr).to_string()),
                     );
+                    // unimplemented!("JumpIfZero emit not fully implemented");
                     copy(
                         &mut bf_code,
                         &mut current_ptr,
@@ -226,6 +328,9 @@ pub fn f(prog: &Prog) -> String {
                     bf_code.push_str("]");
                     clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
                 }
+                Operation::JumpIfLE(_, _, _) => {
+                    // Stub for JumpIfLE
+                }
                 Operation::Jump(target) => {
                     bf_code
                         .push_str(&(format!("\n# Jump Expected: {}\n", current_ptr).to_string()));
@@ -237,8 +342,22 @@ pub fn f(prog: &Prog) -> String {
                         &(format!("\n# JumpVar Expected: {}\n", current_ptr).to_string()),
                     );
 
-                    copy(&mut bf_code, &mut current_ptr, *src, reg_start + 35, buffer_start, 32); // reg[1] = *src
-                    copy(&mut bf_code, &mut current_ptr, reg_start + 35, reg_start, buffer_start, 32); // reg[0] = reg[1]
+                    copy(
+                        &mut bf_code,
+                        &mut current_ptr,
+                        *src,
+                        reg_start + 35,
+                        buffer_start,
+                        32,
+                    ); // reg[1] = *src
+                    copy(
+                        &mut bf_code,
+                        &mut current_ptr,
+                        reg_start + 35,
+                        reg_start,
+                        buffer_start,
+                        32,
+                    ); // reg[0] = reg[1]
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start);
                     for _ in 0..31 {
                         bf_code.push_str("[->+<]>");
@@ -249,9 +368,23 @@ pub fn f(prog: &Prog) -> String {
                     move_ptr(&mut bf_code, &mut current_ptr, 2);
                     bf_code.push_str(">[>>]+[<<]>");
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 35);
-                    add(&mut bf_code, &mut current_ptr, reg_start + 70, buffer_start, reg_start, 0xFFFFFFFF); // reg[0] = reg[1] - 1
+                    add(
+                        &mut bf_code,
+                        &mut current_ptr,
+                        reg_start + 70,
+                        buffer_start,
+                        reg_start,
+                        0xFFFFFFFF,
+                    ); // reg[0] = reg[1] - 1
                     clear_range(&mut bf_code, &mut current_ptr, reg_start + 35, 32); // clear reg[1]
-                    copy(&mut bf_code, &mut current_ptr, reg_start, reg_start + 35, buffer_start, 32); // reg[1] = reg[0]
+                    copy(
+                        &mut bf_code,
+                        &mut current_ptr,
+                        reg_start,
+                        reg_start + 35,
+                        buffer_start,
+                        32,
+                    ); // reg[1] = reg[0]
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start);
                     for _ in 0..31 {
                         bf_code.push_str("[->+<]>");
@@ -267,9 +400,9 @@ pub fn f(prog: &Prog) -> String {
                     bf_code.push_str(
                         &(format!("\n# MoveData Expected: {}\n", current_ptr).to_string()),
                     );
-                    if dest >= &stack_start {
-                        clear_range(&mut bf_code, &mut current_ptr, *dest, 32);
-                    }
+                    //if dest >= &stack_start {
+                    clear_range(&mut bf_code, &mut current_ptr, *dest, 32);
+                    //}
                     copy(
                         &mut bf_code,
                         &mut current_ptr,
@@ -288,8 +421,7 @@ pub fn f(prog: &Prog) -> String {
                         move_ptr(&mut bf_code, &mut current_ptr, running_flag);
                         bf_code.push_str("[-]");
                         // clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
-                    }
-                    else {
+                    } else {
                         panic!("CallExternal is not implemented");
                     }
                 }

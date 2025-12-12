@@ -38,6 +38,9 @@ pub enum Atom {
     Put(id::T, id::T, id::T),
     ExtArray(id::L),
     LoadLabel(id::L), // Load label address (Block ID)
+    Push(id::T),
+    Pop,
+    GetSp,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -110,6 +113,41 @@ impl Converter {
             }
             BlockedTerm::ExtArray(x) => self.bind_atom(Atom::ExtArray(x.clone()), dest, next),
             BlockedTerm::LoadLabel(l) => self.bind_atom(Atom::LoadLabel(l.clone()), dest, next),
+            BlockedTerm::Push(x) => self.bind_atom(Atom::Push(x.clone()), dest, next),
+            BlockedTerm::Pop(x) => {
+                // BlockedTerm::Pop(x) -> Let x = Pop
+                if let Some((dest_x, _)) = &dest {
+                    if dest_x != x {
+                        // This shouldn't happen if Blocked Term Pop(x) means "Pop to x"
+                        // and we are visiting the term that defines x?
+                        // Waitt, blocked::Term is `Let(x, Pop(..), ..)`?
+                        // In `blocked.rs`, I used `Let((arg, ty), Box::new(Term::Pop(arg)), ...)`
+                        // So BlockedTerm::Pop(id::T) is effectively "Pop to id::T".
+                        // BUT `convert_term` structure handles `BlockedTerm::Let` recursively.
+                        // When it visits `e1` (which is Pop(arg)), `dest` is None usually?
+                        // No, `Let` case calls `convert_term(e2)`.
+                        // Then checks `e1`.
+                        // `as_atom` is used for `e1`.
+                        // So I need to update `as_atom` too!
+                    }
+                }
+                // convert_term handles terms that are NOT atoms (like If, Let).
+                // Pop(x) is an atomic action in blocked?
+                // Wait, `Term::Pop(id::T)` is used in `Let`?
+                // `Let((arg, ty), Box::new(Term::Pop(arg)), ...)`
+                // So `e1` is `Term::Pop(arg)`.
+                // `as_atom` must handle it.
+                // Atom should be `Atom::Pop` (no arg) because `Let` handles the binding.
+                // So `BlockedTerm::Pop(x)` -> `Atom::Pop`. `x` is implicit in `Let`.
+                // But `BlockedTerm::Pop(x)` carries `x`. We just ignore it and trust `Let` binds it to `x`?
+                // Or we check consistency?
+                // Actually `BlockedTerm::Pop(x)` seems redundant if wrapped in `Let(x, Pop(x))`.
+                // But `blocked.rs` used `Term::Pop(arg)`.
+                // So `as_atom` should return `Atom::Pop`.
+
+                self.bind_atom(Atom::Pop, dest, next)
+            }
+            BlockedTerm::GetSp(x) => self.bind_atom(Atom::GetSp, dest, next),
 
             // CallCls and CallBlock are removed from blocked::Term
             // TailCallCls and TailCallBlock are the only calls
@@ -153,12 +191,31 @@ impl Converter {
             }
 
             BlockedTerm::Let((x, t), e1, e2) => {
-                // e1 is guaranteed to be Atom by blocked.rs construction
-                let term2 = self.convert_term(e2, dest, next);
-                if let Some(atom) = self.as_atom(e1) {
-                    Term::Let((x.clone(), t.clone()), atom, Box::new(term2))
-                } else {
-                    panic!("Let e1 must be Atom in blocked IR, got: {:?}", e1);
+                // Check if e1 is a nested Let, and flatten if so.
+                // e1 is Box<BlockedTerm>. We need to match on the Term inside.
+                // Use deref coercion or explicit deref.
+                match &**e1 {
+                    BlockedTerm::Let((y, ty), y_val, y_body) => {
+                        // Flatten Let(x, Let(y, val, body), e2) -> Let(y, val, Let(x, body, e2))
+                        // y_val and y_body are &Box<Term>. Need to clone.
+                        let rest =
+                            BlockedTerm::Let((x.clone(), t.clone()), y_body.clone(), e2.clone());
+                        let new_term = BlockedTerm::Let(
+                            (y.clone(), ty.clone()),
+                            y_val.clone(),
+                            Box::new(rest),
+                        );
+                        self.convert_term(&new_term, dest, next)
+                    }
+                    _ => {
+                        // e1 is not Let. Should be atom.
+                        let term2 = self.convert_term(e2, dest, next);
+                        if let Some(atom) = self.as_atom(e1) {
+                            Term::Let((x.clone(), t.clone()), atom, Box::new(term2))
+                        } else {
+                            panic!("Let e1 must be Atom in blocked IR, got: {:?}", e1);
+                        }
+                    }
                 }
             }
 
@@ -210,7 +267,7 @@ impl Converter {
         match term {
             BlockedTerm::Unit => Some(Atom::Unit),
             BlockedTerm::Int(i) => Some(Atom::Int(*i)),
-            BlockedTerm::Float(d) => Some(Atom::Float(*d)),
+            BlockedTerm::Float(f) => Some(Atom::Float(*f)),
             BlockedTerm::Neg(x) => Some(Atom::Neg(x.clone())),
             BlockedTerm::Add(x, y) => Some(Atom::Add(x.clone(), y.clone())),
             BlockedTerm::Sub(x, y) => Some(Atom::Sub(x.clone(), y.clone())),
@@ -220,14 +277,17 @@ impl Converter {
             BlockedTerm::FMul(x, y) => Some(Atom::FMul(x.clone(), y.clone())),
             BlockedTerm::FDiv(x, y) => Some(Atom::FDiv(x.clone(), y.clone())),
             BlockedTerm::Var(x) => Some(Atom::Var(x.clone())),
-            BlockedTerm::SetArgs(xs) => Some(Atom::SetArgs(xs.clone())),
-            BlockedTerm::GetArg(i) => Some(Atom::GetStack(*i)),
-            // GetEnv is handled in convert_term
-            BlockedTerm::Tuple(xs) => Some(Atom::Tuple(xs.clone())),
             BlockedTerm::Get(x, y) => Some(Atom::Get(x.clone(), y.clone())),
             BlockedTerm::Put(x, y, z) => Some(Atom::Put(x.clone(), y.clone(), z.clone())),
-            BlockedTerm::ExtArray(x) => Some(Atom::ExtArray(x.clone())),
+            BlockedTerm::ExtArray(l) => Some(Atom::ExtArray(l.clone())),
             BlockedTerm::LoadLabel(l) => Some(Atom::LoadLabel(l.clone())),
+            BlockedTerm::SetArgs(xs) => Some(Atom::SetArgs(xs.clone())),
+            // BlockedTerm::GetStack does not exist. Handled via GetArg map or GetSp
+            BlockedTerm::GetArg(i) => Some(Atom::GetStack(*i)),
+            BlockedTerm::Push(x) => Some(Atom::Push(x.clone())),
+            BlockedTerm::Pop(_) => Some(Atom::Pop), // Pop(dest) maps to Pop atom
+            BlockedTerm::GetSp(_) => Some(Atom::GetSp),
+            BlockedTerm::Tuple(xs) => Some(Atom::Tuple(xs.clone())),
             _ => None,
         }
     }
@@ -422,6 +482,9 @@ impl fmt::Display for Atom {
             Atom::Put(x, y, z) => write!(f, "{}[{}] = {}", x, y, z),
             Atom::ExtArray(l) => write!(f, "ExtArray({})", l),
             Atom::LoadLabel(l) => write!(f, "LoadLabel({})", l),
+            Atom::Push(x) => write!(f, "Push({})", x),
+            Atom::Pop => write!(f, "Pop"),
+            Atom::GetSp => write!(f, "GetSp"),
         }
     }
 }

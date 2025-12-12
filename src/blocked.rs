@@ -43,9 +43,12 @@ pub enum Term {
     TailCallBlock(id::L),
     TailCallDynamic(id::T), // Call entry point stored in variable
     LoadLabel(id::L),       // Load label address into variable
-    SetArgs(Vec<id::T>),
-    GetArg(usize),
-    GetEnv(usize),
+    SetArgs(Vec<id::T>),    // Legacy: Will be removed or mapped to Push loops
+    GetArg(usize),          // Legacy: Will be removed or mapped to Pop
+    GetEnv(usize),          // Legacy
+    Push(id::T),
+    Pop(id::T),
+    GetSp(id::T), // dest = SP
     Tuple(Vec<id::T>),
     LetTuple(Vec<(id::T, Type)>, id::T, Box<Term>),
     Get(id::T, id::T),
@@ -73,6 +76,16 @@ impl Term {
             Term::LoadLabel(_) => Type::Int,
             Term::SetArgs(_) => Type::Unit,
             Term::GetArg(_) | Term::GetEnv(_) => Type::Int,
+            Term::Push(_) => Type::Unit,
+            Term::Pop(_) => Type::Unit, // Pop returns Unit? No, it binds to a variable. But here `get_type` is for the term itself?
+            // Actually `Let((x, t), Pop(..), ..)` uses `Pop` as the atom.
+            // So `Pop` should return the type of value popped. Assume Int for now.
+            // But `blocked::Term` includes things used in `Let` (Atom-like) and things that are expressions.
+            // `Pop(id::T)` is an *instruction* `Pop to x`.
+            // Wait, `Operation::Pop(dest)` in `virtual`.
+            // Here `Term::Pop(id::T)` -> `Pop(x)`.
+            // It modifies `x`. So it returns Unit.
+            Term::GetSp(_) => Type::Int,
             Term::Tuple(_) => Type::Tuple(vec![]),
             Term::LetTuple(_, _, e) => e.get_type(),
             Term::Get(_, _) => Type::Int,
@@ -114,52 +127,51 @@ impl Converter {
         match term {
             CpsTerm::Let((x, t), atom, e) => {
                 if let CpsAtom::MakeCls(cls) = atom {
-                    if cls.actual_fv.is_empty() {
-                        // Optimization: If no free variables, just load the label.
-                        // No Tuple allocation (Store) needed.
-                        let val = Term::LoadLabel(cls.entry.clone());
-                        let body = self.convert_term(e);
-                        return Term::Let((x.clone(), t.clone()), Box::new(val), Box::new(body));
-                    }
-
-                    // MakeCls(cls) -> Tuple(cls.entry, cls.actual_fv...)
-                    // We need to treat the entry label as an integer (block ID).
-                    // This requires a way to get the block ID at runtime?
-                    // Or we assume `id::L` can be used as `id::T` if we map it?
-                    // `Tuple` expects `Vec<id::T>`.
-                    // We need to introduce a Let(entry_var, Int(label_id))?
-                    // But we don't know label_id here.
-                    // We can use Atom::Label(id::L)? `Tuple` only takes `id::T`.
-                    // Let's use `ExtArray` or similar hack? No.
-                    // We need `Atom::Label` or similar in `Term`.
-                    // Actually, `Atom::Int` takes `i32`.
-                    // We can rely on `intermediate` to resolve Label to Int?
-                    // But `Tuple` is `Vec<id::T>`. The elements must be variables.
-
-                    // So we must: `Let entry = Label(cls.entry)`. `Let closure = Tuple(entry, fvs)`.
-                    // Does `Term` have `Label`? No.
-                    // We need to add `Term::Label(id::L)` or `Atom::Label(id::L)`.
-                    // Let's convert it to `Term::Let((x, t), Atom::Tuple(..), ..)`.
-                    // But first we need a variable holding the label.
+                    // MakeCls(cls) ->
+                    // 1. GetSp(x) (Current Stack Pointer is the address of the closure)
+                    // 2. Push(LoadLabel(entry))
+                    // 3. Push(fv)...
 
                     let entry_var = id::gentmp(&Type::Int);
-                    let mut tuple_elems = vec![entry_var.clone()];
-                    tuple_elems.extend(cls.actual_fv.clone());
 
-                    // Recursive conversion of body
-                    let body = self.convert_term(e);
+                    // Construct Pushes
+                    let mut push_ops = Vec::new();
 
-                    // Construct: Let entry = LoadLabel(entry_label); Let x = Tuple(entry, fvs); body
+                    // Push Entry Label
                     let load_label = Term::Let(
                         (entry_var.clone(), Type::Int),
                         Box::new(Term::LoadLabel(cls.entry.clone())),
-                        Box::new(Term::Let(
-                            (x.clone(), t.clone()),
-                            Box::new(Term::Tuple(tuple_elems)),
-                            Box::new(body),
-                        )),
+                        Box::new(Term::Push(entry_var.clone())),
                     );
-                    return load_label;
+                    push_ops.push(load_label);
+
+                    // Push FVs
+                    for fv in &cls.actual_fv {
+                        push_ops.push(Term::Push(fv.clone()));
+                    }
+
+                    let body = self.convert_term(e);
+
+                    // Sequence: GetSp(x) -> push_ops -> body
+                    // We structure this as nested Lets?
+                    // blocked::Term is not a list of instructions, it's a tree of Lets.
+                    // But `Push` returns Unit.
+                    // Let _ = Push() in ...
+
+                    let mut res = body;
+                    for op in push_ops.into_iter().rev() {
+                        let dummy = id::gentmp(&Type::Unit);
+                        res = Term::Let((dummy, Type::Unit), Box::new(op), Box::new(res));
+                    }
+
+                    // Prepend GetSp(x)
+                    res = Term::Let(
+                        (x.clone(), t.clone()),
+                        Box::new(Term::GetSp(x.clone())), // Get current SP as closure address
+                        Box::new(res),
+                    );
+
+                    return res;
                 }
 
                 let val = self.convert_atom(atom, x, t);
@@ -182,63 +194,196 @@ impl Converter {
             }
             CpsTerm::LetRec(fundef, e) => {
                 // Flatten LetRec.
-                // fundef.body is a new block.
-                let func_label = fundef.name.0.clone(); // Use function name as label
+                let func_label = fundef.name.0.clone();
                 let func_body = self.convert_term(&fundef.body);
+                eprintln!(
+                    "DEBUG: LetRec func: {}, args: {:?}",
+                    func_label, fundef.args
+                );
 
-                // We need to handle arguments.
-                // In blocked, arguments are loaded via GetArg.
-                // So we wrap the body with Let(arg, GetArg(i), ...).
+                // Arguments are popped in reverse order of pushing.
+                // Caller Pushes: Arg1, Arg2, ... ArgN, Self.
+                // Stack Top: Self.
+                // So we Pop: Self, ArgN, ... Arg1.
+
+                // Arguments are popped in reverse order of pushing (Stack LIFO).
+                // Caller Pushes: Arg1, Arg2, ... Self (Top).
+                // We must Pop: Self, ... Arg1.
+                // To generate "Let Self=Pop in Let ... in Let Arg1=Pop", we iterate Forward [Arg1, ..., Self].
                 let mut wrapped_body = func_body;
-                for (i, (arg, ty)) in fundef.args.iter().enumerate().rev() {
+                for (arg, ty) in fundef.args.iter() {
                     wrapped_body = Term::Let(
                         (arg.clone(), ty.clone()),
-                        Box::new(Term::GetArg(i)),
+                        Box::new(Term::Pop(arg.clone())),
                         Box::new(wrapped_body),
                     );
                 }
 
-                self.add_block(func_label, wrapped_body);
+                self.add_block(func_label.clone(), wrapped_body);
 
-                // Continue with e
-                self.convert_term(e)
+                // Create Closure for this function
+                // 1. Calculate FV
+                // fv(LetRec) logic in cps.rs excludes function name and args.
+                // We need fvs of the BODY.
+                let mut body_fv = cps::fv(&fundef.body);
+                for (arg, _) in &fundef.args {
+                    body_fv.remove(arg);
+                }
+                body_fv.remove(&fundef.name.0); // Remove recursive self reference from FVs (it's passed as argument)
+
+                let mut sorted_fvs: Vec<_> = body_fv.into_iter().collect();
+                sorted_fvs.sort(); // Deterministic order
+
+                // 2. Generate MakeCls code (LoadLabel, Push FVs, GetSp)
+                // Same logic as CpsTerm::MakeCls
+                let mut push_ops = Vec::new();
+
+                // Push Entry Label
+                let temp_entry = id::gentmp(&Type::Int);
+                // LoadLabel returns Int.
+                push_ops.push(Term::Let(
+                    (temp_entry.clone(), Type::Int),
+                    Box::new(Term::LoadLabel(func_label)),
+                    Box::new(Term::Push(temp_entry)),
+                ));
+
+                // Push FVs
+                for fv in sorted_fvs {
+                    push_ops.push(Term::Push(fv.clone()));
+                }
+
+                // 3. Bind Closure Ptr (SP) to func name
+                // Sequence: PushOps -> GetSp(func_name) -> Rest(e)
+                // We build bottom-up.
+
+                let rest = self.convert_term(e);
+
+                // GetSp
+                let mut res = Term::Let(
+                    fundef.name.clone(),
+                    Box::new(Term::GetSp(fundef.name.0.clone())),
+                    Box::new(rest),
+                );
+
+                // Wrap Pushes
+                for op in push_ops.into_iter().rev() {
+                    // op is Term::Push(..) or Term::Let(..Push..)
+                    // If it's Push, it returns Unit.
+                    // If it's Let, it returns Unit (Push result).
+                    match op {
+                        Term::Push(var) => {
+                            let dummy = id::gentmp(&Type::Unit);
+                            res = Term::Let(
+                                (dummy, Type::Unit),
+                                Box::new(Term::Push(var)),
+                                Box::new(res),
+                            );
+                        }
+                        Term::Let((x, t), v, body) => {
+                            // op is Let(temp, LoadLabel, Push(temp)).
+                            // We want `Let temp = LoadLabel in Let _ = Push(temp) in res`.
+                            // So, the `body` of this `Let` (which is `Push(temp)`) needs to be wrapped with `res`.
+                            let dummy = id::gentmp(&Type::Unit);
+                            let new_body = Term::Let((dummy, Type::Unit), body, Box::new(res));
+                            res = Term::Let((x, t), v, Box::new(new_body));
+                        }
+                        _ => panic!("Unexpected op structure in LetRec MakeCls"),
+                    }
+                }
+
+                res
             }
             CpsTerm::AppCls(f, args) => {
-                // Optimization: Assume `f` is a raw function pointer (Label Index), NOT a tuple.
-                // This assumes all closures are empty and we optimized MakeCls to LoadLabel.
+                // AppCls(f, args)
+                // args includes k_cls.
+                // 1. Push args...
+                // 2. Push f (Self)
+                // 3. Load code = f[0]
+                // 4. TailCallDynamic(code)
 
-                // SetArgs(args..., f) <--- Pass f as Env (it's the integer label, but fine)
                 let mut all_args = args.clone();
-                all_args.push(f.clone()); // Pass the function ptr itself as environment
+                all_args.push(f.clone()); // Self
 
-                let set_args = Term::SetArgs(all_args);
+                let mut push_ops = Vec::new();
+                for arg in all_args {
+                    push_ops.push(Term::Push(arg));
+                }
 
-                // TailCallDynamic(f) directly
-                let call = Term::TailCallDynamic(f.clone());
+                // Load Code
+                let code_var = id::gentmp(&Type::Int);
+                // Get(f, 0)
+                let load_code = Term::Get(f.clone(), id::gentmp(&Type::Int)); // Wait, Get second arg is var.
+                // We need a var for index 0.
+                let zero_var = id::gentmp(&Type::Int);
+                let get_op = Term::Let(
+                    (zero_var.clone(), Type::Int),
+                    Box::new(Term::Int(0)),
+                    Box::new(Term::Let(
+                        (code_var.clone(), Type::Int),
+                        Box::new(Term::Get(f.clone(), zero_var)),
+                        Box::new(Term::TailCallDynamic(code_var.clone())),
+                    )),
+                );
 
-                let dummy = id::gentmp(&Type::Unit);
-                Term::Let((dummy, Type::Unit), Box::new(set_args), Box::new(call))
+                // Chain Pushes
+                let mut res = get_op;
+                for op in push_ops.into_iter().rev() {
+                    let dummy = id::gentmp(&Type::Unit);
+                    res = Term::Let((dummy, Type::Unit), Box::new(op), Box::new(res));
+                }
+
+                res
             }
             CpsTerm::AppDir(l, args) => {
-                // AppDir can stay as is (TailCallBlock), or if we are consistent, we pass Env?
-                // Known functions don't need Env if they don't use it.
-                // But `lambda lifting` in intermediate assumes Env is passed?
-                // If `intermediate` maps `GetEnv` to `GetStack`, then YES, we must pass Env.
-                // But for AppDir, `Env` is usually empty or not used?
-                // If the function was a closure but optimized to AppDir, it might still have free vars?
-                // CPS `AppDir` implies direct call. `scan_make_cls` found its FVs?
-                // If `mincaml` optimizes `AppCls` to `AppDir`, it means FVs are handled or empty?
-                // Usually `AppDir` is for top-level functions which have no FVs.
-                // So we don't need to pass Env.
-                // BUT `GetEnv` logic in `virtual` relies on Stack position.
-                // If `GetEnv` is used inside a function called via `AppDir`, it will read wrong stack!
-                // Wait, top-level functions don't use `GetEnv` because they have no free variables!
-                // So `AppDir` is safe without extra args.
+                // AppDir(l, args)
+                // args includes k_cls? Yes usually.
+                // Do we pass Self?
+                // Top-level functions don't use Self?
+                // But `f` in `cps.rs` added `self_env` to ALL functions.
+                // So `AppDir` targets must also accept `self_env`.
+                // But what is `self_env` for a direct call?
+                // Use `0` (Unit/Null)?
 
-                let set_args = Term::SetArgs(args.clone());
+                // Wait, `cps.rs` `AppDir` handling: `app_args.push(k_cls)`.
+                // `cps.rs` did NOT add `self` to `AppDir` args.
+                // BUT `f` (defs) logic added `self` to args of ALL functions.
+                // This is a mismatch.
+                // If I change a function signature, I must update all call sites.
+                // `AppDir` calls a label.
+                // That label corresponds to a function converted by `f`.
+                // So it EXPECTS `self`.
+                // So I MUST push a dummy `self` for `AppDir`.
+
+                let mut all_args = args.clone();
+                // Push dummy self (0)
+                let dummy_self = id::gentmp(&Type::Int);
+                all_args.push(dummy_self.clone());
+
+                // We need to define `dummy_self = 0` before pushing.
+
+                let mut push_ops = Vec::new();
+                for arg in all_args {
+                    push_ops.push(Term::Push(arg));
+                }
+
                 let call = Term::TailCallBlock(l.clone());
-                let dummy = id::gentmp(&Type::Unit);
-                Term::Let((dummy, Type::Unit), Box::new(set_args), Box::new(call))
+
+                let mut res = call;
+                for op in push_ops.into_iter().rev() {
+                    // If op is Push(dummy_self), ensure dummy_self is defined?
+                    // No, `Push(arg)` assumes arg is bound.
+                    // We need to bind `dummy_self` globally for this block?
+                    // Or wrap.
+                    let dummy = id::gentmp(&Type::Unit);
+                    res = Term::Let((dummy, Type::Unit), Box::new(op), Box::new(res));
+                }
+
+                // Wrap with `Let dummy_self = 0`
+                Term::Let(
+                    (dummy_self, Type::Int),
+                    Box::new(Term::Int(0)),
+                    Box::new(res),
+                )
             }
         }
     }
@@ -331,10 +476,10 @@ pub fn f(prog: &CpsProg) -> Prog {
         // If formal_fv is missing, we can't emit GetEnv.
 
         // Prepend loading of arguments
-        for (i, (arg, ty)) in fundef.args.iter().enumerate().rev() {
+        for (i, (arg, ty)) in fundef.args.iter().enumerate() {
             func_term = Term::Let(
                 (arg.clone(), ty.clone()),
-                Box::new(Term::GetArg(i)),
+                Box::new(Term::Pop(arg.clone())),
                 Box::new(func_term),
             );
         }
@@ -392,6 +537,9 @@ impl fmt::Display for Term {
             }
             Term::GetArg(i) => write!(f, "GetArg({})", i),
             Term::GetEnv(i) => write!(f, "GetEnv({})", i),
+            Term::Push(x) => write!(f, "Push({})", x),
+            Term::Pop(x) => write!(f, "Pop({})", x),
+            Term::GetSp(x) => write!(f, "GetSp({})", x),
             Term::Tuple(xs) => {
                 let elems_str = xs
                     .iter()

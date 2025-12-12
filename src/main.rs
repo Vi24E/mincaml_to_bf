@@ -5,19 +5,43 @@ use std::io::{self, Read};
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    let code = if args.len() > 1 {
-        fs::read_to_string(&args[1])?
+    let mut sim_mode = false;
+    let mut filename = None;
+
+    for arg in args.iter().skip(1) {
+        if arg == "-s" {
+            sim_mode = true;
+        } else {
+            filename = Some(arg);
+        }
+    }
+
+    let code = if let Some(f) = filename {
+        fs::read_to_string(f)?
     } else {
         let mut buffer = String::new();
         io::stdin().read_to_string(&mut buffer)?;
         buffer
     };
 
-    match compile(&code) {
-        Ok((bf_code, _, _)) => {
-            println!("{}", bf_code);
+    if sim_mode {
+        match mincaml_to_bf::compile_to_virtual(&code) {
+            Ok((virtual_prog, _)) => {
+                let mut sim =
+                    mincaml_to_bf::virtual_interpreter::Simulator::new(&virtual_prog, 5000000);
+                if let Err(e) = sim.run(&virtual_prog) {
+                    eprintln!("Simulation Error: {}", e);
+                }
+            }
+            Err(e) => eprintln!("Error: {}", e),
         }
-        Err(e) => eprintln!("Error: {}", e),
+    } else {
+        match compile(&code) {
+            Ok((bf_code, _, _)) => {
+                println!("{}", bf_code);
+            }
+            Err(e) => eprintln!("Error: {}", e),
+        }
     }
     Ok(())
 }

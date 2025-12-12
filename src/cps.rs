@@ -48,6 +48,70 @@ pub enum Term {
     AppDir(id::L, Vec<id::T>),
 }
 
+// Helper to create a closure-optimized continuation
+fn make_continuation_closure(
+    k_body_term: Term,
+    x: id::T,
+    t_x: Type,
+    k_name: String,
+) -> (Fundef, Atom, id::T) {
+    // 1. Calculate free variables of the continuation body
+    let mut zs = fv(&k_body_term);
+    zs.remove(&x); // Remove argument
+
+    // 2. Create MakeCls
+    let zs_vec: Vec<id::T> = zs.into_iter().collect();
+    let closure = Closure {
+        entry: k_name.clone(),
+        actual_fv: zs_vec.clone(),
+    };
+
+    // 3. Create continuation Fundef
+    // k_cont(arg, self_env)
+    let self_env = id::genid("self_env");
+    let mut body = k_body_term;
+
+    // Inject free variable loading: Let z = Get(self_env, i+1) (0 is code ptr)
+    // Note: In blocked.rs, MakeCls creates [code, fv1, fv2...] on stack.
+    // k points to this block.
+    // k[0] is code. k[1] is fv1.
+    // Inject free variable loading: Let z = Get(self_env, i+1) (0 is code ptr)
+    // Note: In blocked.rs, MakeCls creates [code, fv1, fv2...] on stack.
+    // k points to this block.
+    // k[0] is code. k[1] is fv1.
+    // We iterate zs_vec (actual_fv). The order in zs_vec must match pushing order.
+    // MakeCls uses zs_vec. So order matches.
+    // We want to generate:
+    // Let z1 = Get(self, 1) in Let z2 = Get(self, 2) in Body.
+    // So z1 must be Outermost.
+    // Loop must iterate First -> Outermost? No.
+    // `body = Let(new, ..., body)`.
+    // If we want `Let z1 ... Body`. `body` is processed last.
+    // So z1 is processed last.
+    // Iterate zs_vec in REVERSE.
+    for (i, z) in zs_vec.iter().enumerate().rev() {
+        let idx_var = id::gentmp(&Type::Int);
+        let idx_val = (i + 1) as i32;
+
+        let get_op = Atom::Get(self_env.clone(), idx_var.clone());
+        let let_z = Term::Let((z.clone(), Type::Int), get_op, Box::new(body));
+
+        body = Term::Let((idx_var, Type::Int), Atom::Int(idx_val), Box::new(let_z));
+    }
+
+    let fun_type = Type::Fun(vec![t_x.clone()], Box::new(Type::Unit)); // Simplified type
+
+    let fundef = Fundef {
+        name: (k_name, fun_type),
+        args: vec![(x, t_x), (self_env, Type::Int)], // args + self_env
+        body: Box::new(body),
+    };
+
+    // 4. Return Fundef, MakeCls Atom, and closure variable name (to be let-bound by caller)
+    let k_closure_var = id::genid("k_cls");
+    (fundef, Atom::MakeCls(closure), k_closure_var)
+}
+
 // CPS transformation
 // k: Continuation constructor. Takes the variable holding the result.
 pub fn g(e: closure::Term, k: Box<dyn FnOnce(id::T) -> Term>) -> Term {
@@ -117,92 +181,91 @@ pub fn g(e: closure::Term, k: Box<dyn FnOnce(id::T) -> Term>) -> Term {
         closure::Term::AppCls(f, args) => {
             let x = id::gentmp(&Type::Unit);
             let cont_body = k(x.clone());
-
             let k_name = id::genid("k_cont");
-            let t_x = Type::Int; // Placeholder type
+
+            let (cont_fundef, make_cls_atom, k_cls_var) =
+                make_continuation_closure(cont_body, x, Type::Int, k_name);
 
             let mut app_args = args.clone();
-            app_args.push(k_name.clone());
+            app_args.push(k_cls_var.clone()); // Pass closure as argument
 
-            let cont_fundef = Fundef {
-                name: (
-                    k_name.clone(),
-                    Type::Fun(vec![t_x.clone()], Box::new(Type::Unit)),
-                ),
-                args: vec![(x, t_x)],
-                body: Box::new(cont_body),
-            };
+            let app_term = Term::Let(
+                (k_cls_var, Type::Fun(vec![Type::Int], Box::new(Type::Unit))), // Placeholder type
+                make_cls_atom,
+                Box::new(Term::AppCls(f, app_args)),
+            );
 
-            Term::LetRec(cont_fundef, Box::new(Term::AppCls(f, app_args)))
+            Term::LetRec(cont_fundef, Box::new(app_term))
         }
         closure::Term::AppDir(f, args) => {
             let x = id::gentmp(&Type::Unit);
             let cont_body = k(x.clone());
-
             let k_name = id::genid("k_cont");
-            let t_x = Type::Int; // Placeholder type
+
+            let (cont_fundef, make_cls_atom, k_cls_var) =
+                make_continuation_closure(cont_body, x, Type::Int, k_name);
 
             let mut app_args = args.clone();
-            app_args.push(k_name.clone());
+            app_args.push(k_cls_var.clone()); // Pass closure as argument
 
-            let cont_fundef = Fundef {
-                name: (
-                    k_name.clone(),
-                    Type::Fun(vec![t_x.clone()], Box::new(Type::Unit)),
-                ),
-                args: vec![(x, t_x)],
-                body: Box::new(cont_body),
-            };
+            let app_term = Term::Let(
+                (k_cls_var, Type::Fun(vec![Type::Int], Box::new(Type::Unit))),
+                make_cls_atom,
+                Box::new(Term::AppDir(f, app_args)),
+            );
 
-            Term::LetRec(cont_fundef, Box::new(Term::AppDir(f, app_args)))
+            Term::LetRec(cont_fundef, Box::new(app_term))
         }
         closure::Term::IfEq(x, y, e1, e2) => {
-            let res = id::gentmp(&Type::Int); // Placeholder type
+            let res = id::gentmp(&Type::Int);
             let cont_body = k(res.clone());
             let k_name = id::genid("k_if");
 
-            let k_name1 = k_name.clone();
-            let e1_cps = g(*e1, Box::new(move |r| Term::AppDir(k_name1, vec![r])));
-            let k_name2 = k_name.clone();
-            let e2_cps = g(*e2, Box::new(move |r| Term::AppDir(k_name2, vec![r])));
+            // Make shared continuation closure
+            let (cont_fundef, make_cls_atom, k_cls_var) =
+                make_continuation_closure(cont_body, res, Type::Int, k_name);
 
-            let cont_fundef = Fundef {
-                name: (
-                    k_name.clone(),
-                    Type::Fun(vec![Type::Int], Box::new(Type::Unit)),
-                ),
-                args: vec![(res, Type::Int)],
-                body: Box::new(cont_body),
-            };
+            // We need to pass k_cls_var to e1 and e2.
+            // But g() constructor takes a generic k.
+            // And e1/e2 g() calls need to call k_cls_var... as AppCls?
+            // Yes. k is now a closure.
+            // So continuation of e1 is: AppCls(k_cls_var, [result])
 
-            Term::LetRec(
-                cont_fundef,
+            let k_cls_var1 = k_cls_var.clone();
+            let e1_cps = g(*e1, Box::new(move |r| Term::AppCls(k_cls_var1, vec![r])));
+
+            let k_cls_var2 = k_cls_var.clone();
+            let e2_cps = g(*e2, Box::new(move |r| Term::AppCls(k_cls_var2, vec![r])));
+
+            let if_term = Term::Let(
+                (k_cls_var, Type::Int),
+                make_cls_atom,
                 Box::new(Term::IfEq(x, y, Box::new(e1_cps), Box::new(e2_cps))),
-            )
+            );
+
+            Term::LetRec(cont_fundef, Box::new(if_term))
         }
         closure::Term::IfLE(x, y, e1, e2) => {
-            let res = id::gentmp(&Type::Int); // Placeholder type
+            let res = id::gentmp(&Type::Int);
             let cont_body = k(res.clone());
             let k_name = id::genid("k_if");
 
-            let k_name1 = k_name.clone();
-            let e1_cps = g(*e1, Box::new(move |r| Term::AppDir(k_name1, vec![r])));
-            let k_name2 = k_name.clone();
-            let e2_cps = g(*e2, Box::new(move |r| Term::AppDir(k_name2, vec![r])));
+            let (cont_fundef, make_cls_atom, k_cls_var) =
+                make_continuation_closure(cont_body, res, Type::Int, k_name);
 
-            let cont_fundef = Fundef {
-                name: (
-                    k_name.clone(),
-                    Type::Fun(vec![Type::Int], Box::new(Type::Unit)),
-                ),
-                args: vec![(res, Type::Int)],
-                body: Box::new(cont_body),
-            };
+            let k_cls_var1 = k_cls_var.clone();
+            let e1_cps = g(*e1, Box::new(move |r| Term::AppCls(k_cls_var1, vec![r])));
 
-            Term::LetRec(
-                cont_fundef,
+            let k_cls_var2 = k_cls_var.clone();
+            let e2_cps = g(*e2, Box::new(move |r| Term::AppCls(k_cls_var2, vec![r])));
+
+            let if_term = Term::Let(
+                (k_cls_var, Type::Int),
+                make_cls_atom,
                 Box::new(Term::IfLE(x, y, Box::new(e1_cps), Box::new(e2_cps))),
-            )
+            );
+
+            Term::LetRec(cont_fundef, Box::new(if_term))
         }
         closure::Term::Tuple(xs) => {
             let y = id::gentmp(&Type::Tuple(vec![]));
@@ -251,9 +314,30 @@ pub fn f(prog: &closure::Prog) -> Prog {
 
         let mut new_args = fundef.args.clone();
         new_args.push((k_arg.clone(), k_type));
+        // Add self_env argument to function definitions as well?
+        // Wait, function definitions also need to follow the convention `f(arg, self_env, k)`?
+        // Original MinCaml arguments are in `fundef.args`.
+        // The closure conversion plan says "All continuations must expect [arg, self_env]".
+        // Does this apply to normal functions?
+        // Normal functions are called via AppCls.
+        // AppCls(f, args) -> TailCallDynamic(f[0], args + [f])
+        // So `f` receives: `arg1, arg2, ..., k_cls, self_env`.
+        // Wait, where is `k` in argument list?
+        // `closure.rs` treats `k` as the last argument in CPS.
+        // `g` appends `k_name`.
+        // `AppCls(f, args)` in `cps.rs` appends `k_cls_var`.
+        // So arguments are `[original_args..., k_cls]`.
+        // AND calling convention says we define `f(original_args..., k_cls, self_env)`.
+        // So we need to append a hidden `self` argument to every function definition.
+
+        let self_env = id::genid("self_env");
+        new_args.push((self_env, Type::Int));
 
         let body_cps = g(
             fundef.body.clone(),
+            // When k is called in body, it's AppCls(k_arg, [x])
+            // And now AppCls implies passing environment.
+            // k_arg IS the closure.
             Box::new(move |x| Term::AppCls(k_arg.clone(), vec![x])),
         );
 
@@ -412,4 +496,90 @@ fn try_atomic(e: &closure::Term) -> Option<Atom> {
         closure::Term::Tuple(xs) => Some(Atom::Tuple(xs.clone())),
         _ => None,
     }
+}
+use std::collections::HashSet;
+
+pub fn fv(term: &Term) -> HashSet<id::T> {
+    match term {
+        Term::Let((x, _), atom, e) => {
+            let mut s = fv(e);
+            s.remove(x);
+            s.extend(fv_atom(atom));
+            s
+        }
+        Term::LetTuple(xts, y, e) => {
+            let mut s = fv(e);
+            for (x, _) in xts {
+                s.remove(x);
+            }
+            s.insert(y.clone());
+            s
+        }
+        Term::IfEq(x, y, e1, e2) | Term::IfLE(x, y, e1, e2) => {
+            let mut s = fv(e1);
+            s.extend(fv(e2));
+            s.insert(x.clone());
+            s.insert(y.clone());
+            s
+        }
+        Term::LetRec(fundef, e) => {
+            let mut s = fv(e);
+            let mut body_fv = fv(&fundef.body);
+            for (arg, _) in &fundef.args {
+                body_fv.remove(arg);
+            }
+            s.extend(body_fv);
+            s.remove(&fundef.name.0);
+            s
+        }
+        Term::AppCls(x, args) => {
+            let mut s = HashSet::new();
+            s.insert(x.clone());
+            for arg in args {
+                s.insert(arg.clone());
+            }
+            s
+        }
+        Term::AppDir(_, args) => {
+            let mut s = HashSet::new();
+            for arg in args {
+                s.insert(arg.clone());
+            }
+            s
+        }
+    }
+}
+
+fn fv_atom(atom: &Atom) -> HashSet<id::T> {
+    let mut s = HashSet::new();
+    match atom {
+        Atom::Unit | Atom::Int(_) | Atom::Float(_) | Atom::ExtArray(_) => {}
+        Atom::Var(x) | Atom::Neg(x) | Atom::FNeg(x) => {
+            s.insert(x.clone());
+        }
+        Atom::Add(x, y)
+        | Atom::Sub(x, y)
+        | Atom::FAdd(x, y)
+        | Atom::FSub(x, y)
+        | Atom::FMul(x, y)
+        | Atom::FDiv(x, y)
+        | Atom::Get(x, y) => {
+            s.insert(x.clone());
+            s.insert(y.clone());
+        }
+        Atom::Put(x, y, z) => {
+            s.insert(x.clone());
+            s.insert(y.clone());
+            s.insert(z.clone());
+        }
+        Atom::Tuple(xs) => {
+            for x in xs {
+                s.insert(x.clone());
+            }
+        }
+        Atom::MakeCls(cls) => {
+            s.extend(cls.actual_fv.clone());
+        }
+    }
+    s
 }

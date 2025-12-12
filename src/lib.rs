@@ -13,11 +13,12 @@ pub mod syntax;
 pub mod ty;
 pub mod typing;
 pub mod r#virtual;
+pub mod virtual_interpreter;
 
 use intermediate::Layout;
 use r#virtual::Prog;
 
-pub fn compile(code: &str) -> Result<(String, Prog, Layout), String> {
+pub fn compile_to_virtual(code: &str) -> Result<(Prog, Layout), String> {
     let (_, syntax) = parser::parse(code).map_err(|e| format!("{:?}", e))?;
     let typed_syntax = typing::f(&syntax).map_err(|e| format!("{:?}", e))?;
     let k_norm = k_normal::f(&typed_syntax);
@@ -30,13 +31,18 @@ pub fn compile(code: &str) -> Result<(String, Prog, Layout), String> {
     use std::io::Write;
     std::io::stderr().flush().unwrap();
     let virtual_prog = r#virtual::f(&intermediate_prog);
-    // println!("{}", virtual_prog.to_string());
     eprintln!(
         "DEBUG: Virtual Prog generated. Blocks: {}",
         virtual_prog.blocks.len()
     );
+    Ok((virtual_prog, intermediate_prog.layout))
+}
+
+pub fn compile(code: &str) -> Result<(String, Prog, Layout), String> {
+    let (virtual_prog, layout) = compile_to_virtual(code)?;
+    // println!("{}", virtual_prog);
     eprintln!("DEBUG: Calling emit::f");
     let bf_code = emit::f(&virtual_prog);
     eprintln!("DEBUG: Emit finished. Code length: {}", bf_code.len());
-    Ok((bf_code, virtual_prog, intermediate_prog.layout))
+    Ok((bf_code, virtual_prog, layout))
 }

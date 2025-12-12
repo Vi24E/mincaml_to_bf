@@ -12,12 +12,14 @@ all operands u32 are pointer which points to the head-cell of variable
 */
 #[derive(Debug)]
 pub enum Operation {
-    SetImm(u32, i32),          // x = i
-    Neg(u32, u32),             // z = -x
-    Add(u32, u32, u32),        // z = x + y
-    Sub(u32, u32, u32),        // z = x - y
-    SubZ(u32, u32, u32),       // z = max(0, x - y)
-    JumpIfZero(u32, u32, u32), // if x == 0 goto y
+    SetImm(u32, i32),    // x = i
+    Neg(u32, u32),       // z = -x
+    Add(u32, u32, u32),  // z = x + y
+    Sub(u32, u32, u32),  // z = x - y
+    SubZ(u32, u32, u32), // z = max(0, x - y)
+    JumpIfZero(u32, u32, u32),
+    JumpIfLE(u32, u32, u32), // cond_addr, then_block, else_block
+    // if x == 0 goto y
     Jump(u32),                 // Unconditional jump to block y
     JumpVar(u32),              // Jump to block index stored in variable x
     MoveData(u32, u32, usize), // move and copy data from x to y, size is in bytes
@@ -26,6 +28,8 @@ pub enum Operation {
     OutputByte(u32),           // Write byte from address
     Load(u32, u32),            // dest = *src (Indirect Read)
     Store(u32, u32),           // *dest = src (Indirect Write)
+    Push(u32),                 // [sp] = *src; sp += 32
+    Pop(u32),                  // sp -= 32; *dest = [sp]
 }
 
 #[derive(Debug)]
@@ -51,6 +55,7 @@ pub struct Prog {
     pub reg_start: usize,
     pub var_start: usize,
     pub stack_start: usize,
+    pub sp_addr: usize,
 }
 
 impl Prog {
@@ -61,6 +66,7 @@ impl Prog {
         reg_start: usize,
         var_start: usize,
         stack_start: usize,
+        sp_addr: usize,
     ) -> Self {
         Prog {
             blocks,
@@ -69,6 +75,7 @@ impl Prog {
             reg_start,
             var_start,
             stack_start,
+            sp_addr,
         }
     }
 }
@@ -105,6 +112,16 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
     // ...
     // So we need `(block_count + 1) * 2` cells.
     let reg_start = (block_count + 1) * 2;
+    // SP register is allocated at the end of register area (reg_start + reg_size - 1)
+    // Actually, registers are [reg_start .. reg_start + reg_size].
+    // Let's pick a fixed slot for SP. Index 0?
+    // Using reg_start for SP.
+    let sp_addr = reg_start;
+    // Shift other registers?
+    // The previous logic didn't use specific register slots except for temp.
+    // Temp was at reg_start + 64.
+    // So reg_start is safe for SP.
+
     let var_start = reg_start + reg_size;
     let stack_start = var_start + var_count * 32;
 
@@ -112,53 +129,19 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
     let block_map = &prog.layout.block_map;
     let var_map = &prog.layout.var_map;
 
-    // Sort blocks by index to ensure order matches block_map values?
-    // virtual::Block doesn't have ID. It's just a list of ops.
-    // The interpreter will index into `blocks` vector using the block index.
-    // So we must push blocks in the order of their indices.
+    // ... (rest of the code) ...
 
     let mut sorted_blocks: Vec<(&id::L, &intermediate::Block)> =
         prog.blocks.iter().map(|b| (&b.id, b)).collect();
     // We need to sort by the index assigned in layout.
     sorted_blocks.sort_by_key(|(id, _)| *block_map.get(*id).unwrap());
 
-    // Initialize reg_hp
-    // Create an initialization block at index 0?
-    // No, index 0 is Main? No, 0 is Entry Block?
-    // Intermediate layout: "Ensure entry block is index 1".
-    // 0 is usually the "Start of Program" implicit logic in emit.rs.
-    // emit.rs manually activates block 1.
-    // We can inject `SetImm(reg_hp, heap_start)` into the first block (Entry)?
-    // Or simpler: Just emit it at the beginning of `blocks`.
-
-    // We need to find the entry block and Prepend op.
-    // Or just create a new Block 1 that inits HP and jumps to real Entry?
-    // But Block 1 is `entry_label`.
-
-    // Let's prepend to the actual entry block.
-    // Which block corresponds to entry_label?
-    // block_map[entry_label] == 1.
-
     let entry_idx = *block_map.get(&prog.entry).unwrap(); // Should be 1
 
-    for (_, block) in sorted_blocks {
+    for (i, block) in sorted_blocks {
         let mut ops = Vec::new();
 
-        // If this is the entry block, init HP
-        // ERROR: reg_hp is not used in this compiler (CPS/Lambda Lifted), and its initialization
-        // was corrupting the buffer area (SetImm writes to buffer if reg_hp overlaps).
-        // Removed initialization.
-        /*
-        if *block_map.get(&block.id).unwrap() == entry_idx {
-            // reg_hp must not overlap with buffer (buffer is at reg_start + 96 .. reg_start + 128)
-            let reg_hp = (reg_start + 10) as u32;
-            let heap_start_addr = (stack_start + 1024) as i32;
-            ops.push(Operation::SetImm(reg_hp, heap_start_addr));
-        }
-        */
-
         // The last variable slot is reserved for comparison temp
-        // ...
         let cmp_temp_addr = var_start + (var_count - 1) * 32;
         convert_term(
             &block.term,
@@ -169,8 +152,10 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
             var_start,
             stack_start,
             cmp_temp_addr,
+            sp_addr,
             &constants,
         );
+        // DEBUG: Dump block info
         blocks.push(Block { ops: ops });
     }
 
@@ -181,6 +166,7 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
         reg_start,
         var_start,
         stack_start,
+        sp_addr,
     )
 }
 
@@ -224,6 +210,7 @@ fn convert_term(
     var_start: usize,
     stack_start: usize,
     cmp_temp_addr: usize,
+    sp_addr: usize,
     constants: &HashMap<id::T, ConstVal>,
 ) {
     match term {
@@ -238,6 +225,7 @@ fn convert_term(
                 reg_start,
                 var_start,
                 stack_start,
+                sp_addr,
                 constants,
             );
             convert_term(
@@ -249,37 +237,31 @@ fn convert_term(
                 var_start,
                 stack_start,
                 cmp_temp_addr,
+                sp_addr,
                 constants,
             );
         }
         Term::Jump(l) => {
             if let Some(target_idx) = block_map.get(l) {
-                // Unconditional jump to block
                 ops.push(Operation::Jump(*target_idx as u32));
             } else if let Some(offset) = var_map.get(l) {
-                // Jump to address stored in variable
                 let addr = (var_start + offset * 32) as u32;
-                // Replace JumpIndirect with OutputByte
                 ops.push(Operation::OutputByte(addr));
             } else {
-                // External call
                 ops.push(Operation::CallExternal(l.clone()));
             }
+        }
+        Term::JumpVar(x) => {
+            let addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
+            ops.push(Operation::JumpVar(addr));
         }
         Term::IfEq(x, y, l1, l2) => {
             let addr_x = (var_start + var_map.get(x).unwrap() * 32) as u32;
             let addr_y = (var_start + var_map.get(y).unwrap() * 32) as u32;
             let idx_l1 = *block_map.get(l1).unwrap() as u32;
             let idx_l2 = *block_map.get(l2).unwrap() as u32;
-
-            // Use reserved global temp variable for comparison to avoid collision
             let tmp_addr = cmp_temp_addr as u32;
-
-            // tmp = x - y
             ops.push(Operation::Sub(tmp_addr, addr_x, addr_y));
-
-            // if tmp == 0 goto l1 else goto l2
-            // JumpIfZero(cond, true_label_flag_addr, false_label_flag_addr)
             ops.push(Operation::JumpIfZero(tmp_addr, idx_l1, idx_l2));
         }
         Term::IfLE(x, y, l1, l2) => {
@@ -287,34 +269,12 @@ fn convert_term(
             let addr_y = (var_start + var_map.get(y).unwrap() * 32) as u32;
             let idx_l1 = *block_map.get(l1).unwrap() as u32;
             let idx_l2 = *block_map.get(l2).unwrap() as u32;
-
             let tmp_addr = cmp_temp_addr as u32;
-
-            // tmp = max(0, x - y)
-            // if x <= y, x - y <= 0, so max(0, x-y) == 0.
-            ops.push(Operation::SubZ(tmp_addr, addr_x, addr_y));
-
-            ops.push(Operation::JumpIfZero(tmp_addr, idx_l1, idx_l2));
+            // x <= y means x - y <= 0
+            ops.push(Operation::Sub(tmp_addr, addr_x, addr_y)); // Use wrapping sub
+            ops.push(Operation::JumpIfLE(tmp_addr, idx_l1, idx_l2));
         }
-        Term::JumpVar(x) => {
-            // Unconditional jump to Dynamic Variable
-            // The "running loop" checks if `running_flag` matches `block_id`.
-            // So we just need to set `running_flag` to the value of variable `x`.
-            // `running_flag` is at address 0.
-            let addr_x = (var_start + var_map.get(x).unwrap() * 32) as u32;
-            ops.push(Operation::JumpVar(addr_x));
-        }
-        Term::Atom(_) => panic!("Atom at tail position should not happen in blocked IR"),
         Term::LetTuple(xts, atom, e) => {
-            // Let (x, y) = Tuple(...) in ...
-            // Atom must be Atom::Tuple?
-            // Or Atom::Var if it's already a tuple pointer?
-            // blocked.rs handles LetTuple by just converting body.
-            // But intermediate.rs has LetTuple struct.
-            // We need to implement tuple destructuring.
-            // x = atom[0], y = atom[1]...
-            // If atom is Var(t), then x = *(t+0), y = *(t+1)
-
             let tuple_ptr_addr = match atom {
                 Atom::Var(v) => (var_start + var_map.get(v).unwrap() * 32) as u32,
                 _ => panic!("LetTuple expected Var on RHS, got {:?}", atom),
@@ -322,20 +282,9 @@ fn convert_term(
 
             for (i, (x, _)) in xts.iter().enumerate() {
                 let dest_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
-                // dest = *(tuple_ptr + i*4) ?
-                // No, heap is 32-bit aligned?
-                // If tuple_ptr points to 32-bit cell index?
-                // BF Memory is u32 array.
-                // So `Load(dest, tuple_ptr + i*32)`.
-                // We need to `Add` i*32 to tuple_ptr and Load.
-                // We need a temporary register for address calculation.
-                let tmp_addr = (reg_start + 64) as u32; // Scratch register
-
-                // tmp = tuple_ptr + offset
+                let tmp_addr = (reg_start + 64) as u32;
                 ops.push(Operation::SetImm(tmp_addr, (i * 32) as i32));
                 ops.push(Operation::Add(tmp_addr, tuple_ptr_addr, tmp_addr));
-
-                // dest = *tmp
                 ops.push(Operation::Load(dest_addr, tmp_addr));
             }
 
@@ -348,9 +297,11 @@ fn convert_term(
                 var_start,
                 stack_start,
                 cmp_temp_addr,
+                sp_addr,
                 constants,
             );
         }
+        Term::Atom(_) => panic!("Atom at tail position should not happen in blocked IR"),
     }
 }
 
@@ -363,15 +314,13 @@ fn convert_atom(
     reg_start: usize,
     var_start: usize,
     stack_start: usize,
+    sp_addr: usize,
     constants: &HashMap<id::T, ConstVal>,
 ) {
     match atom {
-        Atom::Unit => {
-            ops.push(Operation::SetImm(dest_addr, 0));
-        }
-        Atom::Int(i) => {
-            ops.push(Operation::SetImm(dest_addr, *i));
-        }
+        Atom::Unit => ops.push(Operation::SetImm(dest_addr, 0)),
+        Atom::Int(i) => ops.push(Operation::SetImm(dest_addr, *i)),
+        Atom::Float(_) => panic!("Float not supported"),
         Atom::Var(x) => {
             let src_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
             ops.push(Operation::MoveData(dest_addr, src_addr, 32));
@@ -386,6 +335,17 @@ fn convert_atom(
             let addr_y = (var_start + var_map.get(y).unwrap() * 32) as u32;
             ops.push(Operation::Sub(dest_addr, addr_x, addr_y));
         }
+        Atom::FNeg(_)
+        | Atom::FAdd(_, _)
+        | Atom::FSub(_, _)
+        | Atom::FMul(_, _)
+        | Atom::FDiv(_, _) => {
+            panic!("Float ops not supported");
+        }
+        Atom::Neg(x) => {
+            let src_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
+            ops.push(Operation::Neg(dest_addr, src_addr));
+        }
         Atom::GetStack(i) => {
             let src_addr = (stack_start + i * 32) as u32;
             ops.push(Operation::MoveData(dest_addr, src_addr, 32));
@@ -397,18 +357,12 @@ fn convert_atom(
                     let src_addr = (var_start + offset * 32) as u32;
                     ops.push(Operation::MoveData(dst_addr, src_addr, 32));
                 } else if let Some(block_idx) = block_map.get(x) {
-                    // It's a label (continuation), pass the block index
                     ops.push(Operation::SetImm(dst_addr, *block_idx as i32));
                 } else {
                     panic!("SetArgs: Variable or Label not found: {}", x);
                 }
             }
-            // SetArgs returns Unit, so set dest to 0
             ops.push(Operation::SetImm(dest_addr, 0));
-        }
-        Atom::Neg(x) => {
-            let src_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
-            ops.push(Operation::Neg(dest_addr, src_addr));
         }
         Atom::LoadLabel(l) => {
             if let Some(idx) = block_map.get(l) {
@@ -417,51 +371,30 @@ fn convert_atom(
                 panic!("LoadLabel: Label not found: {}", l);
             }
         }
-        Atom::Tuple(_xs) => {
-            // Static Optimization: We assume all tuple usage is optimized away or unused dynamically (for closed functions).
-            // So we don't need to allocate on heap.
-            // Just set dest to 0.
+        Atom::Tuple(_) => {
+            // Optimization for closed functions/constants. Dynamic allocation via MakeCls is handled via Push logic in blocked.rs now (Tuple -> Heap allocation not implemented here)
+            // But wait, `MakeCls` conversion in `blocked.rs` emits `Let x = Tuple(..)`.
+            // Wait, I changed `blocked.rs` to use `Push` for `MakeCls`!
+            // `Let entry = LoadLabel`. `Let x = GetSp(x)`. `Push`.
+            // So `blocked.rs` NO LONGER emits `Atom::Tuple` for Closures!
+            // `Atom::Tuple` remains for regular Tuples?
+            // If so, `Tuple` conversion here should allocate?
+            // Currently it Sets 0.
             ops.push(Operation::SetImm(dest_addr, 0));
         }
         Atom::Get(x, y) => {
-            // dest = x[y]
-            let addr_x = (var_start
-                + match var_map.get(x) {
-                    Some(v) => *v,
-                    None => {
-                        use std::io::Write;
-                        eprintln!("DEBUG: var_map keys: {:?}", var_map.keys());
-                        std::io::stderr().flush().unwrap();
-                        panic!(
-                            "virtual::convert_atom: Get(x, y) - x not found in var_map: {}",
-                            x
-                        );
-                    }
-                } * 32) as u32;
-            let addr_y = (var_start + var_map.get(y).unwrap() * 32) as u32;
-            let dest_addr = dest_addr; // Make sure we have dest_addr in scope? It is argument.
+            // Logic for Get (Array/Tuple access)
+            // Using logic from previous view
+            let addr_x = (var_start + var_map.get(x).unwrap() * 32) as u32;
+            let dest_addr = dest_addr;
 
-            // Static Optimization: Check if x is a known Tuple constant and y is a known Int index
             let mut optim_success = false;
-
-            // Resolve y to int index if possible
-            let idx_val = if let Some(ConstVal::Int(i)) = constants.get(y) {
-                Some(*i)
-            } else {
-                // Should check if y refers to something that is Int?
-                // analyze_constants handles Int atoms.
-                None
-            };
-
-            if let Some(idx) = idx_val {
+            if let Some(ConstVal::Int(i)) = constants.get(y) {
                 if let Some(ConstVal::Tuple(fields)) = constants.get(x) {
-                    if idx >= 0 && (idx as usize) < fields.len() {
-                        let field_var = &fields[idx as usize];
-                        // Now we want the value of field_var.
-                        // If field_var itself is a LoadLabel, we can emit SetImm(dest, block_idx).
+                    if *i >= 0 && (*i as usize) < fields.len() {
+                        let field_var = &fields[*i as usize];
                         if let Some(ConstVal::LoadLabel(l)) = constants.get(field_var) {
                             if let Some(block_idx) = block_map.get(l) {
-                                // Optimized! Emit SetImm directly.
                                 ops.push(Operation::SetImm(dest_addr, *block_idx as i32));
                                 optim_success = true;
                             }
@@ -471,62 +404,44 @@ fn convert_atom(
             }
 
             if !optim_success {
-                // Fallback to dynamic Load
-                let addr_x = (var_start
-                    + match var_map.get(x) {
-                        Some(v) => *v,
-                        None => {
-                            use std::io::Write;
-                            eprintln!("DEBUG: var_map keys: {:?}", var_map.keys());
-                            std::io::stderr().flush().unwrap();
-                            panic!(
-                                "virtual::convert_atom: Get(x, y) - x not found in var_map: {}",
-                                x
-                            );
-                        }
-                    } * 32) as u32;
                 let addr_y = (var_start + var_map.get(y).unwrap() * 32) as u32;
-
                 let tmp_addr = (reg_start + 64) as u32;
-
-                // y * 32
                 ops.push(Operation::MoveData(tmp_addr, addr_y, 32));
                 for _ in 0..5 {
                     ops.push(Operation::Add(tmp_addr, tmp_addr, tmp_addr));
                 }
-
-                // tmp = x + (y*32)
                 ops.push(Operation::Add(tmp_addr, addr_x, tmp_addr));
-
-                // dest = *tmp
                 ops.push(Operation::Load(dest_addr, tmp_addr));
             }
         }
         Atom::Put(x, y, z) => {
-            // x[y] = z
             let addr_x = (var_start + var_map.get(x).unwrap() * 32) as u32;
             let addr_y = (var_start + var_map.get(y).unwrap() * 32) as u32;
             let addr_z = (var_start + var_map.get(z).unwrap() * 32) as u32;
-
             let tmp_addr = (reg_start + 64) as u32;
             ops.push(Operation::MoveData(tmp_addr, addr_y, 32));
             for _ in 0..5 {
                 ops.push(Operation::Add(tmp_addr, tmp_addr, tmp_addr));
             }
             ops.push(Operation::Add(tmp_addr, addr_x, tmp_addr));
-
-            // *tmp = z
             ops.push(Operation::Store(tmp_addr, addr_z));
         }
-
-        Atom::ExtArray(_) => panic!("ExtArray not supported"),
-        Atom::Float(_)
-        | Atom::FNeg(_)
-        | Atom::FAdd(_, _)
-        | Atom::FSub(_, _)
-        | Atom::FMul(_, _)
-        | Atom::FDiv(_, _) => {
-            panic!("Float operations not supported")
+        Atom::ExtArray(l) => {
+            // ExtArray typically returns address of the array.
+            // We don't really support global arrays in this simple backend yet.
+            // But we can return a dummy address or handling it.
+            ops.push(Operation::SetImm(dest_addr, 0));
+        }
+        Atom::Push(x) => {
+            let src_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
+            ops.push(Operation::Push(src_addr));
+            ops.push(Operation::SetImm(dest_addr, 0));
+        }
+        Atom::Pop => {
+            ops.push(Operation::Pop(dest_addr));
+        }
+        Atom::GetSp => {
+            ops.push(Operation::MoveData(dest_addr, sp_addr as u32, 32));
         }
     }
 }
@@ -544,6 +459,9 @@ impl fmt::Display for Operation {
             Operation::JumpIfZero(cond, l1, l2) => {
                 write!(f, "JumpIfZero({}, {}, {})", cond, l1, l2)
             }
+            Operation::JumpIfLE(cond, l1, l2) => {
+                write!(f, "JumpIfLE({}, {}, {})", cond, l1, l2)
+            }
             Operation::Jump(target) => write!(f, "Jump({})", target),
             Operation::JumpVar(src) => write!(f, "JumpVar({})", src),
             Operation::MoveData(dest, src, size) => {
@@ -554,6 +472,8 @@ impl fmt::Display for Operation {
             Operation::OutputByte(addr) => write!(f, "OutputByte({})", addr),
             Operation::Load(dest, src) => write!(f, "Load({}, {})", dest, src),
             Operation::Store(dest, src) => write!(f, "Store({}, {})", dest, src),
+            Operation::Push(src) => write!(f, "Push({})", src),
+            Operation::Pop(dest) => write!(f, "Pop({})", dest),
         }
     }
 }
