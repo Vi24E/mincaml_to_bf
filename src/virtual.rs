@@ -281,9 +281,9 @@ fn convert_term(
             let idx_l1 = *block_map.get(l1).unwrap() as u32;
             let idx_l2 = *block_map.get(l2).unwrap() as u32;
             let tmp_addr = cmp_temp_addr as u32;
-            // x <= y means x - y <= 0
-            ops.push(Operation::Sub(tmp_addr, addr_x, addr_y)); // Use wrapping sub
-            ops.push(Operation::JumpIfLE(tmp_addr, idx_l1, idx_l2));
+            // x <= y means max(0, x - y) == 0
+            ops.push(Operation::SubZ(tmp_addr, addr_x, addr_y));
+            ops.push(Operation::JumpIfZero(tmp_addr, idx_l1, idx_l2));
         }
         Term::LetTuple(xts, atom, e) => {
             let tuple_ptr_addr = match atom {

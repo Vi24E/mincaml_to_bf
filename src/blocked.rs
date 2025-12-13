@@ -503,8 +503,8 @@ pub fn f(prog: &CpsProg) -> Prog {
             real_args.pop(); // Remove Self
         }
 
-        // 2. Pop remaining arguments in REVERSE order (Stack is LIFO)
-        for (arg, ty) in real_args.into_iter().rev() {
+        // 2. Pop remaining arguments in FORWARD order (Wraps to Inside-Out: Let ArgN ... Let Arg1)
+        for (arg, ty) in real_args.into_iter() {
             func_term = Term::Let(
                 (arg.clone(), ty.clone()),
                 Box::new(Term::Pop(arg.clone())),

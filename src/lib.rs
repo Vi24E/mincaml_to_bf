@@ -40,7 +40,7 @@ pub fn compile_to_virtual(code: &str) -> Result<(Prog, Layout), String> {
 
 pub fn compile(code: &str) -> Result<(String, Prog, Layout), String> {
     let (virtual_prog, layout) = compile_to_virtual(code)?;
-    // println!("{}", virtual_prog);
+    println!("{}", virtual_prog);
     eprintln!("DEBUG: Calling emit::f");
     let bf_code = emit::f(&virtual_prog);
     eprintln!("DEBUG: Emit finished. Code length: {}", bf_code.len());

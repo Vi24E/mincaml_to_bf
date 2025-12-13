@@ -16,7 +16,7 @@ impl Simulator {
         // Memory size: enough for stack.
         // Stack starts at prog.stack_start.
         // Let's allocate reasonably large memory.
-        let mem_size = prog.stack_start + 1000000; // Increased memory size for CPS stack usage
+        let mem_size = prog.stack_start + 100000000; // Drastically increased memory size for verification
 
         // Initialize SP
         // SP starts at prog.sp_addr (variable holding SP value).
@@ -49,7 +49,7 @@ impl Simulator {
             }
 
             let block = &prog.blocks[self.pc];
-            eprintln!("DEBUG: Executing Block {}", self.pc);
+            // eprintln!("DEBUG: Executing Block {}", self.pc);
 
             // Execute Ops
             let current_pc = self.pc;
@@ -118,29 +118,27 @@ impl Simulator {
             Operation::JumpIfZero(addr, l1, l2) => {
                 let val = self.read_int(*addr as usize);
                 if val == 0 {
-                    self.pc = (*l1 - 1) as usize;
+                    self.pc = *l1 as usize;
                 } else {
-                    self.pc = (*l2 - 1) as usize;
+                    self.pc = *l2 as usize;
                 }
             }
             Operation::JumpIfLE(addr, l1, l2) => {
                 let val = self.read_int(*addr as usize);
                 if val <= 0 {
-                    self.pc = (*l1 - 1) as usize;
+                    self.pc = *l1 as usize;
                 } else {
-                    self.pc = (*l2 - 1) as usize;
+                    self.pc = *l2 as usize;
                 }
             }
             Operation::Jump(target) => {
-                self.pc = (*target - 1) as usize;
+                self.pc = *target as usize;
             }
             Operation::JumpVar(src) => {
-                // `src` holds the block index (1-based)
+                // `src` holds the block index (0-based)
                 let target = self.read_int(*src as usize);
-                if target == 0 {
-                    return Err("Jump to Block 0 (Invalid)".to_string());
-                }
-                self.pc = (target - 1) as usize;
+                // 0 is valid (Block 0)
+                self.pc = target as usize;
             }
             Operation::MoveData(dest, src, size_bytes) => {
                 // size is in bytes?
@@ -229,6 +227,7 @@ impl Simulator {
 
                 sp -= 32; // sp -= 32
                 let val = self.read_int(sp as usize); // val = *sp
+                // eprintln!("DEBUG: Pop val={}", val);
 
                 self.write_int(*dest as usize, val); // *dest = val
                 self.write_int(sp_addr, sp);
