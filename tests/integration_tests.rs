@@ -222,6 +222,7 @@ fn test_emit_subz_direct() {
         reg_start,
         var_start,
         stack_start,
+        sp_addr: stack_start,
     };
 
     println!("DEBUG: Running test_emit_subz_direct");
@@ -288,6 +289,7 @@ fn test_emit_subz_pure() {
         reg_start,
         var_start,
         stack_start,
+        sp_addr: stack_start,
     };
 
     println!("DEBUG: Running test_emit_subz_pure");

@@ -1,0 +1,184 @@
+   Compiling mincaml_to_bf v0.1.0 (/Users/koharayu/Desktop/大学/cpu実験/mincaml_to_bf)
+warning: unused import: `self`
+ --> src/intermediate.rs:2:22
+  |
+2 | use crate::closure::{self, Prog as ClosureProg};
+  |                      ^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `std::convert::TryInto`
+ --> src/virtual_interpreter.rs:2:5
+  |
+2 | use std::convert::TryInto;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Write` and `self`
+ --> src/virtual_interpreter.rs:3:15
+  |
+3 | use std::io::{self, Write};
+  |               ^^^^  ^^^^^
+
+warning: unused variable: `push_ops`
+   --> src/blocked.rs:154:29
+    |
+154 |                     let mut push_ops: Vec<Term> = Vec::new();
+    |                             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_push_ops`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> src/blocked.rs:154:25
+    |
+154 |                     let mut push_ops: Vec<Term> = Vec::new();
+    |                         ----^^^^^^^^
+    |                         |
+    |                         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `i`
+   --> src/blocked.rs:470:14
+    |
+470 |         for (i, (arg, ty)) in fundef.args.iter().enumerate() {
+    |              ^ help: if this is intentional, prefix it with an underscore: `_i`
+
+warning: unused variable: `x`
+   --> src/intermediate.rs:150:32
+    |
+150 |             BlockedTerm::GetSp(x) => self.bind_atom(Atom::GetSp, dest, next),
+    |                                ^ help: if this is intentional, prefix it with an underscore: `_x`
+
+warning: value assigned to `var_count` is never read
+   --> src/intermediate.rs:357:13
+    |
+357 |     let mut var_count = 0; // Max var count across all functions (for global stats, if needed)
+    |             ^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> src/intermediate.rs:380:9
+    |
+380 |     let mut map_args = |func_name: &str, map: &mut HashMap<id::T, usize>, count: &mut usize| {
+    |         ----^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: unused variable: `e1`
+   --> src/k_normal.rs:101:28
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                            ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(_e1, e2) | syntax::Syntax::LE(_e1, e2) => g(
+    |                            +                             +
+
+warning: unused variable: `e2`
+   --> src/k_normal.rs:101:32
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                                ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(e1, _e2) | syntax::Syntax::LE(e1, _e2) => g(
+    |                                +                             +
+
+warning: unused variable: `args`
+   --> src/k_normal.rs:209:25
+    |
+209 |                     let args: Vec<id::T> = Vec::new();
+    |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_args`
+
+warning: unused variable: `entry_idx`
+   --> src/virtual.rs:139:9
+    |
+139 |     let entry_idx = *block_map.get(&prog.entry).unwrap(); // Should be 1
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entry_idx`
+
+warning: unused variable: `i`
+   --> src/virtual.rs:141:10
+    |
+141 |     for (i, block) in sorted_blocks {
+    |          ^ help: if this is intentional, prefix it with an underscore: `_i`
+
+warning: unused variable: `l`
+   --> src/virtual.rs:429:24
+    |
+429 |         Atom::ExtArray(l) => {
+    |                        ^ help: if this is intentional, prefix it with an underscore: `_l`
+
+warning: unused variable: `self_ptr`
+   --> src/virtual_interpreter.rs:165:25
+    |
+165 |                     let self_ptr = self.read_int(sp - 32);
+    |                         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_self_ptr`
+
+warning: unused variable: `addr`
+   --> src/virtual_interpreter.rs:205:34
+    |
+205 |             Operation::InputByte(addr) => {
+    |                                  ^^^^ help: if this is intentional, prefix it with an underscore: `_addr`
+
+warning: method `get_type` is never used
+  --> src/blocked.rs:61:8
+   |
+60 | impl Term {
+   | --------- method in this implementation
+61 |     fn get_type(&self) -> Type {
+   |        ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `closure_map` is never read
+   --> src/blocked.rs:107:5
+    |
+105 | struct Converter {
+    |        --------- field in this struct
+106 |     blocks: Vec<Block>,
+107 |     closure_map: HashMap<id::T, (id::L, Vec<id::T>)>, // Var -> (Label, FVs)
+    |     ^^^^^^^^^^^
+
+warning: method `new_block_id` is never used
+   --> src/blocked.rs:129:8
+    |
+114 | impl Converter {
+    | -------------- method in this implementation
+...
+129 |     fn new_block_id(&self) -> id::L {
+    |        ^^^^^^^^^^^^
+
+warning: function `add_point` is never used
+   --> src/emit.rs:494:4
+    |
+494 | fn add_point(bf_code: &mut String, n: u32) {
+    |    ^^^^^^^^^
+
+warning: function `sub_point` is never used
+   --> src/emit.rs:501:4
+    |
+501 | fn sub_point(bf_code: &mut String, n: u32) {
+    |    ^^^^^^^^^
+
+warning: function `iszero` is never used
+   --> src/emit.rs:674:4
+    |
+674 | fn iszero(bf_code: &mut String, current_ptr: &mut u32, register: u32, buffer: u32, dest: u32) {
+    |    ^^^^^^
+
+warning: `mincaml_to_bf` (lib) generated 23 warnings (run `cargo fix --lib -p mincaml_to_bf` to apply 5 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.47s
+     Running `target/debug/mincaml_to_bf -s test2.ml`
+DEBUG: LetRec func: k_cont.50, args: [("Tu49", Int), ("self_env.51", Int)]
+DEBUG: LetRec func: k_cont.53, args: [("Tu48", Int), ("self_env.54", Int)]
+DEBUG: LetRec func: k_if.28, args: [("Ti27", Int), ("self_env.29", Int)]
+DEBUG: LetRec func: k_cont.35, args: [("Tu33", Int), ("self_env.36", Int)]
+DEBUG: LetRec func: k_cont.41, args: [("Tu32", Int), ("self_env.42", Int)]
+
+thread 'main' (256695357) panicked at src/intermediate.rs:237:29:
+bind_atom: next label is None (Ret removed)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

@@ -1,0 +1,553 @@
+   Compiling mincaml_to_bf v0.1.0 (/Users/koharayu/Desktop/大学/cpu実験/mincaml_to_bf)
+warning: unused import: `self`
+ --> src/intermediate.rs:2:22
+  |
+2 | use crate::closure::{self, Prog as ClosureProg};
+  |                      ^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `std::convert::TryInto`
+ --> src/virtual_interpreter.rs:2:5
+  |
+2 | use std::convert::TryInto;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Write` and `self`
+ --> src/virtual_interpreter.rs:3:15
+  |
+3 | use std::io::{self, Write};
+  |               ^^^^  ^^^^^
+
+warning: unused variable: `push_ops`
+   --> src/blocked.rs:154:29
+    |
+154 |                     let mut push_ops: Vec<Term> = Vec::new();
+    |                             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_push_ops`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> src/blocked.rs:154:25
+    |
+154 |                     let mut push_ops: Vec<Term> = Vec::new();
+    |                         ----^^^^^^^^
+    |                         |
+    |                         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `i`
+   --> src/blocked.rs:501:14
+    |
+501 |         for (i, (arg, ty)) in fundef.args.iter().enumerate() {
+    |              ^ help: if this is intentional, prefix it with an underscore: `_i`
+
+warning: unused variable: `x`
+   --> src/intermediate.rs:150:32
+    |
+150 |             BlockedTerm::GetSp(x) => self.bind_atom(Atom::GetSp, dest, next),
+    |                                ^ help: if this is intentional, prefix it with an underscore: `_x`
+
+warning: value assigned to `block_count` is never read
+   --> src/intermediate.rs:360:13
+    |
+360 |     let mut block_count = 0;
+    |             ^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `var_count` is never read
+   --> src/intermediate.rs:361:13
+    |
+361 |     let mut var_count = 0; // Max var count across all functions (for global stats, if needed)
+    |             ^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `entry_label`
+   --> src/intermediate.rs:356:5
+    |
+356 |     entry_label: &id::L,
+    |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entry_label`
+
+warning: variable does not need to be mutable
+   --> src/intermediate.rs:378:9
+    |
+378 |     let mut map_args = |func_name: &str, map: &mut HashMap<id::T, usize>, count: &mut usize| {
+    |         ----^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: unused variable: `e1`
+   --> src/k_normal.rs:101:28
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                            ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(_e1, e2) | syntax::Syntax::LE(_e1, e2) => g(
+    |                            +                             +
+
+warning: unused variable: `e2`
+   --> src/k_normal.rs:101:32
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                                ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(e1, _e2) | syntax::Syntax::LE(e1, _e2) => g(
+    |                                +                             +
+
+warning: unused variable: `args`
+   --> src/k_normal.rs:209:25
+    |
+209 |                     let args: Vec<id::T> = Vec::new();
+    |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_args`
+
+warning: unused variable: `entry_idx`
+   --> src/virtual.rs:139:9
+    |
+139 |     let entry_idx = *block_map.get(&prog.entry).unwrap(); // Should be 1
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entry_idx`
+
+warning: unused variable: `i`
+   --> src/virtual.rs:141:10
+    |
+141 |     for (i, block) in sorted_blocks {
+    |          ^ help: if this is intentional, prefix it with an underscore: `_i`
+
+warning: unused variable: `l`
+   --> src/virtual.rs:429:24
+    |
+429 |         Atom::ExtArray(l) => {
+    |                        ^ help: if this is intentional, prefix it with an underscore: `_l`
+
+warning: unused variable: `self_ptr`
+   --> src/virtual_interpreter.rs:165:25
+    |
+165 |                     let self_ptr = self.read_int(sp - 32);
+    |                         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_self_ptr`
+
+warning: unused variable: `addr`
+   --> src/virtual_interpreter.rs:205:34
+    |
+205 |             Operation::InputByte(addr) => {
+    |                                  ^^^^ help: if this is intentional, prefix it with an underscore: `_addr`
+
+warning: method `get_type` is never used
+  --> src/blocked.rs:61:8
+   |
+60 | impl Term {
+   | --------- method in this implementation
+61 |     fn get_type(&self) -> Type {
+   |        ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `closure_map` is never read
+   --> src/blocked.rs:107:5
+    |
+105 | struct Converter {
+    |        --------- field in this struct
+106 |     blocks: Vec<Block>,
+107 |     closure_map: HashMap<id::T, (id::L, Vec<id::T>)>, // Var -> (Label, FVs)
+    |     ^^^^^^^^^^^
+
+warning: method `new_block_id` is never used
+   --> src/blocked.rs:129:8
+    |
+114 | impl Converter {
+    | -------------- method in this implementation
+...
+129 |     fn new_block_id(&self) -> id::L {
+    |        ^^^^^^^^^^^^
+
+warning: function `add_point` is never used
+   --> src/emit.rs:494:4
+    |
+494 | fn add_point(bf_code: &mut String, n: u32) {
+    |    ^^^^^^^^^
+
+warning: function `sub_point` is never used
+   --> src/emit.rs:501:4
+    |
+501 | fn sub_point(bf_code: &mut String, n: u32) {
+    |    ^^^^^^^^^
+
+warning: function `iszero` is never used
+   --> src/emit.rs:674:4
+    |
+674 | fn iszero(bf_code: &mut String, current_ptr: &mut u32, register: u32, buffer: u32, dest: u32) {
+    |    ^^^^^^
+
+warning: `mincaml_to_bf` (lib) generated 25 warnings (run `cargo fix --lib -p mincaml_to_bf` to apply 5 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.21s
+     Running `target/debug/mincaml_to_bf -s test2.ml`
+DEBUG: LetRec func: k_cont.53, args: [("Tu48", Int), ("self_env.54", Int)], current_self: Some("self_env.54")
+DEBUG: LetRec func: k_cont.50, args: [("Tu49", Int), ("self_env.51", Int)], current_self: Some("self_env.51")
+DEBUG: LetRec func: k_if.28, args: [("Ti27", Int), ("self_env.29", Int)], current_self: Some("self_env.29")
+DEBUG: Check Get(self_env.29, Ti30). current_self=Some("self_env.29")
+DEBUG: Intercepted Get(self_env.29, Ti30) -> Var(k.25)
+DEBUG: LetRec func: k_cont.41, args: [("Tu32", Int), ("self_env.42", Int)], current_self: Some("self_env.42")
+DEBUG: Check Get(self_env.42, Ti46). current_self=Some("self_env.42")
+DEBUG: Intercepted Get(self_env.42, Ti46) -> Var(n.13)
+DEBUG: Check Get(self_env.42, Ti45). current_self=Some("self_env.42")
+DEBUG: Intercepted Get(self_env.42, Ti45) -> Var(k.11)
+DEBUG: Check Get(self_env.42, Ti44). current_self=Some("self_env.42")
+DEBUG: Intercepted Get(self_env.42, Ti44) -> Var(k_cls.31)
+DEBUG: Check Get(self_env.42, Ti43). current_self=Some("self_env.42")
+DEBUG: Intercepted Get(self_env.42, Ti43) -> Var(fib_alt.12)
+DEBUG: LetRec func: k_cont.35, args: [("Tu33", Int), ("self_env.36", Int)], current_self: Some("self_env.36")
+DEBUG: Check Get(self_env.36, Ti39). current_self=Some("self_env.36")
+DEBUG: Intercepted Get(self_env.36, Ti39) -> Var(k.11)
+DEBUG: Check Get(self_env.36, Ti38). current_self=Some("self_env.36")
+DEBUG: Intercepted Get(self_env.36, Ti38) -> Var(k_cls.31)
+DEBUG: Check Get(self_env.36, Ti37). current_self=Some("self_env.36")
+DEBUG: Intercepted Get(self_env.36, Ti37) -> Var(Ti6.17)
+DEBUG: Intermediate Prog:
+Entry: main
+Block Count: 10
+Var Count: 72
+Block Map:
+  prelude: 0
+  k_cont.50: 1
+  k_cont.53: 2
+  main: 3
+  k_if.28: 4
+  k_cont.35: 5
+  k_cont.41: 6
+  block.87: 7
+  block.88: 8
+  fib_alt.12: 9
+Var Map:
+  Tu49: 0
+  self_env.51: 1
+  Tu58: 2
+  Ti56: 3
+  Tu57: 4
+  Tu48: 5
+  self_env.54: 6
+  Ti2.24: 7
+  k_cls.52: 8
+  Tu62: 9
+  Tu61: 10
+  Ti59: 11
+  Tu60: 12
+  k.11: 13
+  Tu66: 14
+  fib_alt.12: 15
+  Ti1.23: 16
+  k_cls.55: 17
+  Tu65: 18
+  Tu64: 19
+  Tu63: 20
+  Ti27: 21
+  self_env.29: 22
+  k.25: 23
+  Ti30: 24
+  Tu68: 25
+  Tu67: 26
+  Tu33: 27
+  self_env.36: 28
+  k_cls.31: 29
+  Ti6.17: 30
+  Ti39: 31
+  Ti38: 32
+  Ti37: 33
+  Ti9.20: 34
+  Ti10.21: 35
+  x.22: 36
+  Ti34: 37
+  Tu72: 38
+  Tu71: 39
+  Tu32: 40
+  self_env.42: 41
+  n.13: 42
+  Ti46: 43
+  Ti45: 44
+  Ti44: 45
+  Ti43: 46
+  Ti7.18: 47
+  Ti8.19: 48
+  Tu78: 49
+  Tu77: 50
+  Tu76: 51
+  k_cls.40: 52
+  Tu75: 53
+  Tu74: 54
+  Tu73: 55
+  Tu70: 56
+  Tu69: 57
+  Ti4.15: 58
+  Ti5.16: 59
+  Tu85: 60
+  Tu84: 61
+  Tu83: 62
+  Tu82: 63
+  k_cls.47: 64
+  Tu81: 65
+  Tu80: 66
+  Tu79: 67
+  self_env.26: 68
+  Ti3.14: 69
+  Tu86: 70
+prelude:
+  Jump(main)
+k_cont.50:
+  Let (Tu49: int) = Pop in
+  Let (self_env.51: int) = Pop in
+  Let (Tu58: unit) = Push(Tu49) in
+  Let (Ti56: int) = 0 in
+  Let (Tu57: unit) = Push(Ti56) in
+  Jump(halt)
+k_cont.53:
+  Let (Tu48: int) = Pop in
+  Let (self_env.54: int) = Pop in
+  Let (Ti2.24: int) = Tu48 in
+  Let (k_cls.52: (int -> unit)) = LoadLabel(k_cont.50) in
+  Let (Tu62: unit) = Push(Ti2.24) in
+  Let (Tu61: unit) = Push(k_cls.52) in
+  Let (Ti59: int) = 0 in
+  Let (Tu60: unit) = Push(Ti59) in
+  Jump(min_caml_print_int)
+main:
+  Let (k.11: int) = 42 in
+  Let (Tu66: unit) = Push(k.11) in
+  Let (fib_alt.12: (int -> int)) = LoadLabel(fib_alt.12) in
+  Let (Ti1.23: int) = 10 in
+  Let (k_cls.55: (int -> unit)) = LoadLabel(k_cont.53) in
+  Let (Tu65: unit) = Push(Ti1.23) in
+  Let (Tu64: unit) = Push(k_cls.55) in
+  Let (Tu63: unit) = Push(fib_alt.12) in
+  JumpVar(fib_alt.12)
+k_if.28:
+  Let (Ti27: int) = Pop in
+  Let (self_env.29: int) = Pop in
+  Let (k.25: int) = Pop in
+  Let (Ti30: int) = 1 in
+  Let (k.25: int) = k.25 in
+  Let (Tu68: unit) = Push(Ti27) in
+  Let (Tu67: unit) = Push(k.25) in
+  JumpVar(k.25)
+k_cont.35:
+  Let (Tu33: int) = Pop in
+  Let (self_env.36: int) = Pop in
+  Let (k.11: int) = Pop in
+  Let (k_cls.31: int) = Pop in
+  Let (Ti6.17: int) = Pop in
+  Let (Ti39: int) = 1 in
+  Let (k.11: int) = k.11 in
+  Let (Ti38: int) = 2 in
+  Let (k_cls.31: int) = k_cls.31 in
+  Let (Ti37: int) = 3 in
+  Let (Ti6.17: int) = Ti6.17 in
+  Let (Ti9.20: int) = Tu33 in
+  Let (Ti10.21: int) = Ti6.17 + Ti9.20 in
+  Let (x.22: int) = Ti10.21 + k.11 in
+  Let (Ti34: int) = x.22 + x.22 in
+  Let (Tu72: unit) = Push(Ti34) in
+  Let (Tu71: unit) = Push(k_cls.31) in
+  JumpVar(k_cls.31)
+k_cont.41:
+  Let (Tu32: int) = Pop in
+  Let (self_env.42: int) = Pop in
+  Let (n.13: int) = Pop in
+  Let (k.11: int) = Pop in
+  Let (k_cls.31: int) = Pop in
+  Let (fib_alt.12: int) = Pop in
+  Let (Ti46: int) = 1 in
+  Let (n.13: int) = n.13 in
+  Let (Ti45: int) = 2 in
+  Let (k.11: int) = k.11 in
+  Let (Ti44: int) = 3 in
+  Let (k_cls.31: int) = k_cls.31 in
+  Let (Ti43: int) = 4 in
+  Let (fib_alt.12: int) = fib_alt.12 in
+  Let (Ti6.17: int) = Tu32 in
+  Let (Ti7.18: int) = 2 in
+  Let (Ti8.19: int) = n.13 - Ti7.18 in
+  Let (Tu78: unit) = Push(Ti6.17) in
+  Let (Tu77: unit) = Push(k_cls.31) in
+  Let (Tu76: unit) = Push(k.11) in
+  Let (k_cls.40: (int -> unit)) = LoadLabel(k_cont.35) in
+  Let (Tu75: unit) = Push(Ti8.19) in
+  Let (Tu74: unit) = Push(k_cls.40) in
+  Let (Tu73: unit) = Push(fib_alt.12) in
+  JumpVar(fib_alt.12)
+block.87:
+  Let (Tu70: unit) = Push(n.13) in
+  Let (Tu69: unit) = Push(k_cls.31) in
+  JumpVar(k_cls.31)
+block.88:
+  Let (Ti4.15: int) = 1 in
+  Let (Ti5.16: int) = n.13 - Ti4.15 in
+  Let (Tu85: unit) = Push(fib_alt.12) in
+  Let (Tu84: unit) = Push(k_cls.31) in
+  Let (Tu83: unit) = Push(k.11) in
+  Let (Tu82: unit) = Push(n.13) in
+  Let (k_cls.47: (int -> unit)) = LoadLabel(k_cont.41) in
+  Let (Tu81: unit) = Push(Ti5.16) in
+  Let (Tu80: unit) = Push(k_cls.47) in
+  Let (Tu79: unit) = Push(fib_alt.12) in
+  JumpVar(fib_alt.12)
+fib_alt.12:
+  Let (self_env.26: int) = Pop in
+  Let (k.25: (unit -> unit)) = Pop in
+  Let (n.13: int) = Pop in
+  Let (Ti3.14: int) = 1 in
+  Let (Tu86: unit) = Push(k.25) in
+  Let (k_cls.31: int) = LoadLabel(k_if.28) in
+  IfLE(n.13, Ti3.14, Goto(block.87), Goto(block.88))
+
+DEBUG: Starting virtual::f
+DEBUG: Virtual Prog generated. Blocks: 10
+DEBUG: Virtual Program:
+Virtual Prog:
+Block Count: 10
+Var Count: 72
+Block 0:
+  Jump(3)
+Block 1:
+  Pop(150)
+  Pop(182)
+  Push(150)
+  SetImm(214, 0)
+  SetImm(246, 0)
+  Push(246)
+  SetImm(278, 0)
+  CallExternal(halt)
+Block 2:
+  Pop(310)
+  Pop(342)
+  MoveData(374, 310, 32)
+  SetImm(406, 1)
+  Push(374)
+  SetImm(438, 0)
+  Push(406)
+  SetImm(470, 0)
+  SetImm(502, 0)
+  Push(502)
+  SetImm(534, 0)
+  CallExternal(min_caml_print_int)
+Block 3:
+  SetImm(566, 42)
+  Push(566)
+  SetImm(598, 0)
+  SetImm(630, 9)
+  SetImm(662, 10)
+  SetImm(694, 2)
+  Push(662)
+  SetImm(726, 0)
+  Push(694)
+  SetImm(758, 0)
+  Push(630)
+  SetImm(790, 0)
+  JumpVar(630)
+Block 4:
+  Pop(822)
+  Pop(854)
+  Pop(886)
+  SetImm(918, 1)
+  MoveData(886, 886, 32)
+  Push(822)
+  SetImm(950, 0)
+  Push(886)
+  SetImm(982, 0)
+  JumpVar(886)
+Block 5:
+  Pop(1014)
+  Pop(1046)
+  Pop(566)
+  Pop(1078)
+  Pop(1110)
+  SetImm(1142, 1)
+  MoveData(566, 566, 32)
+  SetImm(1174, 2)
+  MoveData(1078, 1078, 32)
+  SetImm(1206, 3)
+  MoveData(1110, 1110, 32)
+  MoveData(1238, 1014, 32)
+  Add(1270, 1110, 1238)
+  Add(1302, 1270, 566)
+  Add(1334, 1302, 1302)
+  Push(1334)
+  SetImm(1366, 0)
+  Push(1078)
+  SetImm(1398, 0)
+  JumpVar(1078)
+Block 6:
+  Pop(1430)
+  Pop(1462)
+  Pop(1494)
+  Pop(566)
+  Pop(1078)
+  Pop(630)
+  SetImm(1526, 1)
+  MoveData(1494, 1494, 32)
+  SetImm(1558, 2)
+  MoveData(566, 566, 32)
+  SetImm(1590, 3)
+  MoveData(1078, 1078, 32)
+  SetImm(1622, 4)
+  MoveData(630, 630, 32)
+  MoveData(1110, 1430, 32)
+  SetImm(1654, 2)
+  Sub(1686, 1494, 1654)
+  Push(1110)
+  SetImm(1718, 0)
+  Push(1078)
+  SetImm(1750, 0)
+  Push(566)
+  SetImm(1782, 0)
+  SetImm(1814, 5)
+  Push(1686)
+  SetImm(1846, 0)
+  Push(1814)
+  SetImm(1878, 0)
+  Push(630)
+  SetImm(1910, 0)
+  JumpVar(630)
+Block 7:
+  Push(1494)
+  SetImm(1942, 0)
+  Push(1078)
+  SetImm(1974, 0)
+  JumpVar(1078)
+Block 8:
+  SetImm(2006, 1)
+  Sub(2038, 1494, 2006)
+  Push(630)
+  SetImm(2070, 0)
+  Push(1078)
+  SetImm(2102, 0)
+  Push(566)
+  SetImm(2134, 0)
+  Push(1494)
+  SetImm(2166, 0)
+  SetImm(2198, 6)
+  Push(2038)
+  SetImm(2230, 0)
+  Push(2198)
+  SetImm(2262, 0)
+  Push(630)
+  SetImm(2294, 0)
+  JumpVar(630)
+Block 9:
+  Pop(2326)
+  Pop(886)
+  Pop(1494)
+  SetImm(2358, 1)
+  Push(886)
+  SetImm(2390, 0)
+  SetImm(1078, 4)
+  Sub(2422, 1494, 2358)
+  JumpIfLE(2422, 7, 8)
+
+DEBUG: Executing Block 0
+DEBUG: Executing Block 2
+0
+Simulation Error: PC out of bounds: 851443711

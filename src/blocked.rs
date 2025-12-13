@@ -105,6 +105,9 @@ pub struct Prog {
 struct Converter {
     blocks: Vec<Block>,
     closure_map: HashMap<id::T, (id::L, Vec<id::T>)>, // Var -> (Label, FVs)
+    // New fields for Get optimization
+    constants: HashMap<id::T, i32>,
+    current_self: Option<(id::T, id::L, Vec<id::T>)>, // (SelfVar, FuncLabel, SortedFVs)
 }
 
 impl Converter {
@@ -112,6 +115,8 @@ impl Converter {
         Converter {
             blocks: Vec::new(),
             closure_map,
+            constants: HashMap::new(),
+            current_self: None,
         }
     }
 
@@ -128,22 +133,16 @@ impl Converter {
             CpsTerm::Let((x, t), atom, e) => {
                 if let CpsAtom::MakeCls(cls) = atom {
                     // MakeCls(cls) ->
-                    // 1. GetSp(x) (Current Stack Pointer is the address of the closure)
-                    // 2. Push(LoadLabel(entry))
-                    // 3. Push(fv)...
+                    // 1. Push(fv)... (Push FVs to Stack)
+                    // 2. x = LoadLabel(entry) (Bind x to the Code Label)
 
-                    let entry_var = id::gentmp(&Type::Int);
+                    // We DO NOT create a Tuple/Closure Object on Stack.
+                    // We DO NOT GetSp.
+                    // This creates a "Stack-Based Closure" where FVs are on Stack,
+                    // and 'x' is just the Label to jump to.
+                    // This works for One-Shot Continuations (Linear Stack consumption).
 
-                    // Construct Pushes
                     let mut push_ops = Vec::new();
-
-                    // Push Entry Label
-                    let load_label = Term::Let(
-                        (entry_var.clone(), Type::Int),
-                        Box::new(Term::LoadLabel(cls.entry.clone())),
-                        Box::new(Term::Push(entry_var.clone())),
-                    );
-                    push_ops.push(load_label);
 
                     // Push FVs
                     for fv in &cls.actual_fv {
@@ -152,26 +151,29 @@ impl Converter {
 
                     let body = self.convert_term(e);
 
-                    // Sequence: GetSp(x) -> push_ops -> body
-                    // We structure this as nested Lets?
-                    // blocked::Term is not a list of instructions, it's a tree of Lets.
-                    // But `Push` returns Unit.
-                    // Let _ = Push() in ...
+                    // Sequence: push_ops -> Let x = LoadLabel -> body
 
                     let mut res = body;
+
+                    // Prepend LoadLabel
+                    res = Term::Let(
+                        (x.clone(), t.clone()),
+                        Box::new(Term::LoadLabel(cls.entry.clone())),
+                        Box::new(res),
+                    );
+
+                    // Prepend Pushes
                     for op in push_ops.into_iter().rev() {
                         let dummy = id::gentmp(&Type::Unit);
                         res = Term::Let((dummy, Type::Unit), Box::new(op), Box::new(res));
                     }
 
-                    // Prepend GetSp(x)
-                    res = Term::Let(
-                        (x.clone(), t.clone()),
-                        Box::new(Term::GetSp(x.clone())), // Get current SP as closure address
-                        Box::new(res),
-                    );
-
                     return res;
+                }
+
+                // Track constants for Get optimization
+                if let CpsAtom::Int(val) = atom {
+                    self.constants.insert(x.clone(), *val);
                 }
 
                 let val = self.convert_atom(atom, x, t);
@@ -195,23 +197,95 @@ impl Converter {
             CpsTerm::LetRec(fundef, e) => {
                 // Flatten LetRec.
                 let func_label = fundef.name.0.clone();
+                // eprintln!("DEBUG: LetRec func={} args={:?}", func_label, fundef.args);
+                // 1. Calculate FV - Use closure_map if available (authoritative source)
+                // Search for any closure that uses this function as entry point
+                let func_label_str = fundef.name.0.clone();
+                let closure_fvs = self
+                    .closure_map
+                    .values()
+                    .find(|(entry, _)| *entry == func_label_str);
+
+                let mut sorted_fvs = if let Some((_, fvs)) = closure_fvs {
+                    fvs.clone()
+                } else {
+                    // Fallback (e.g. not a closure, or optimization passed)
+                    let mut body_fv = cps::fv(&fundef.body);
+                    for (arg, _) in &fundef.args {
+                        body_fv.remove(arg);
+                    }
+                    body_fv.remove(&fundef.name.0); // Remove recursive self
+                    let mut sorted: Vec<_> = body_fv.into_iter().collect();
+                    sorted.sort();
+                    sorted
+                };
+
+                // Stack Protocol:
+                // Caller: [Push FVs (Sorted)] -> [Push Args] -> Top
+                // Callee: [Pop Args (Forward Iter)] -> [Pop FVs (Forward Iter)]
+                // (Because wrapping creates inside-out execution order)
+
+                // Set Current Self for body conversion
+                // Assume Self is the LAST argument (standard mincaml/cps behavior)
+                // We SKIP popping Self (as it wasn't pushed).
+
+                let mut real_args = fundef.args.clone();
+                let mut self_arg = None;
+
+                if !real_args.is_empty() {
+                    // Remove last arg (Self)
+                    let last = real_args.pop().unwrap();
+                    self_arg = Some(last.0);
+                }
+
+                // Update converter state
+                let old_self = self.current_self.clone();
+                if let Some(s) = &self_arg {
+                    self.current_self = Some((s.clone(), func_label.clone(), sorted_fvs.clone()));
+                } else {
+                    self.current_self = None;
+                }
+
                 let func_body = self.convert_term(&fundef.body);
-                eprintln!(
-                    "DEBUG: LetRec func: {}, args: {:?}",
-                    func_label, fundef.args
-                );
 
-                // Arguments are popped in reverse order of pushing.
-                // Caller Pushes: Arg1, Arg2, ... ArgN, Self.
-                // Stack Top: Self.
-                // So we Pop: Self, ArgN, ... Arg1.
+                // Restore state
+                self.current_self = old_self;
 
-                // Arguments are popped in reverse order of pushing (Stack LIFO).
-                // Caller Pushes: Arg1, Arg2, ... Self (Top).
-                // We must Pop: Self, ... Arg1.
-                // To generate "Let Self=Pop in Let ... in Let Arg1=Pop", we iterate Forward [Arg1, ..., Self].
                 let mut wrapped_body = func_body;
-                for (arg, ty) in fundef.args.iter() {
+
+                // 2. Prepend Pop for FVs (Forward)
+                // Stack has: [FV1, FV2, ... FVN, Arg1, ... ArgM] (Top)
+                // Wrapping Order: Loop A, B -> Let B ... Let A ...
+                // Exec Order: Pop B (Top), Pop A.
+                // We want to Pop Top first.
+                // So Outermost Let should be ArgM.
+                // So ArgM must be wrapped LAST.
+                // So Args Loop must be LAST.
+
+                // In FVs [FV1...FVN]. Top is FVN.
+                // We want Let FVN... Let FV1.
+                // So we Loop FV1...FVN.
+                // 1. Wrap FV1. 2. Wrap FVN.
+                // Result Let FVN ... Let FV1.
+                // Exec: Pop FVN, Pop FV1. Matches.
+
+                for fv in sorted_fvs.iter() {
+                    wrapped_body = Term::Let(
+                        (fv.clone(), Type::Int),
+                        Box::new(Term::Pop(fv.clone())),
+                        Box::new(wrapped_body),
+                    );
+                }
+
+                // 3. Prepend Pop for Args (Forward)
+                // Stack Top is ArgM.
+                // We want Let ArgM ... Let Arg1.
+                // Loop 1..M.
+                // Wrap 1. Wrap M.
+                // Result Let M ... Let 1.
+                // Exec Pop M ... Pop 1. Matches.
+
+                for (arg, ty) in real_args.iter() {
                     wrapped_body = Term::Let(
                         (arg.clone(), ty.clone()),
                         Box::new(Term::Pop(arg.clone())),
@@ -221,55 +295,30 @@ impl Converter {
 
                 self.add_block(func_label.clone(), wrapped_body);
 
-                // Create Closure for this function
-                // 1. Calculate FV
-                // fv(LetRec) logic in cps.rs excludes function name and args.
-                // We need fvs of the BODY.
-                let mut body_fv = cps::fv(&fundef.body);
-                for (arg, _) in &fundef.args {
-                    body_fv.remove(arg);
-                }
-                body_fv.remove(&fundef.name.0); // Remove recursive self reference from FVs (it's passed as argument)
+                // 4. Generate MakeCls code (Push FVs, Bind Label)
 
-                let mut sorted_fvs: Vec<_> = body_fv.into_iter().collect();
-                sorted_fvs.sort(); // Deterministic order
-
-                // 2. Generate MakeCls code (LoadLabel, Push FVs, GetSp)
-                // Same logic as CpsTerm::MakeCls
+                // 2. Generate MakeCls code (Push FVs, Bind Label)
                 let mut push_ops = Vec::new();
-
-                // Push Entry Label
-                let temp_entry = id::gentmp(&Type::Int);
-                // LoadLabel returns Int.
-                push_ops.push(Term::Let(
-                    (temp_entry.clone(), Type::Int),
-                    Box::new(Term::LoadLabel(func_label)),
-                    Box::new(Term::Push(temp_entry)),
-                ));
 
                 // Push FVs
                 for fv in sorted_fvs {
                     push_ops.push(Term::Push(fv.clone()));
                 }
 
-                // 3. Bind Closure Ptr (SP) to func name
-                // Sequence: PushOps -> GetSp(func_name) -> Rest(e)
-                // We build bottom-up.
-
+                // 3. Bind Func Name to Label
                 let rest = self.convert_term(e);
 
-                // GetSp
-                let mut res = Term::Let(
+                let mut res = rest;
+
+                // Bind Label
+                res = Term::Let(
                     fundef.name.clone(),
-                    Box::new(Term::GetSp(fundef.name.0.clone())),
-                    Box::new(rest),
+                    Box::new(Term::LoadLabel(fundef.name.0.clone())),
+                    Box::new(res),
                 );
 
-                // Wrap Pushes
+                // Prepend Pushes
                 for op in push_ops.into_iter().rev() {
-                    // op is Term::Push(..) or Term::Let(..Push..)
-                    // If it's Push, it returns Unit.
-                    // If it's Let, it returns Unit (Push result).
                     match op {
                         Term::Push(var) => {
                             let dummy = id::gentmp(&Type::Unit);
@@ -279,15 +328,7 @@ impl Converter {
                                 Box::new(res),
                             );
                         }
-                        Term::Let((x, t), v, body) => {
-                            // op is Let(temp, LoadLabel, Push(temp)).
-                            // We want `Let temp = LoadLabel in Let _ = Push(temp) in res`.
-                            // So, the `body` of this `Let` (which is `Push(temp)`) needs to be wrapped with `res`.
-                            let dummy = id::gentmp(&Type::Unit);
-                            let new_body = Term::Let((dummy, Type::Unit), body, Box::new(res));
-                            res = Term::Let((x, t), v, Box::new(new_body));
-                        }
-                        _ => panic!("Unexpected op structure in LetRec MakeCls"),
+                        _ => panic!("Unexpected op"),
                     }
                 }
 
@@ -295,38 +336,22 @@ impl Converter {
             }
             CpsTerm::AppCls(f, args) => {
                 // AppCls(f, args)
-                // args includes k_cls.
+                // f is the Label.
+                // args are arguments.
                 // 1. Push args...
-                // 2. Push f (Self)
-                // 3. Load code = f[0]
-                // 4. TailCallDynamic(code)
+                // 2. JumpVar(f) (TailCallDynamic)
 
-                let mut all_args = args.clone();
-                all_args.push(f.clone()); // Self
+                // NO Push Self. FVs are already on stack (from MakeCls).
+                // NO Get(f, 0). f IS the label.
 
                 let mut push_ops = Vec::new();
-                for arg in all_args {
-                    push_ops.push(Term::Push(arg));
+                for arg in args {
+                    push_ops.push(Term::Push(arg.clone()));
                 }
 
-                // Load Code
-                let code_var = id::gentmp(&Type::Int);
-                // Get(f, 0)
-                let load_code = Term::Get(f.clone(), id::gentmp(&Type::Int)); // Wait, Get second arg is var.
-                // We need a var for index 0.
-                let zero_var = id::gentmp(&Type::Int);
-                let get_op = Term::Let(
-                    (zero_var.clone(), Type::Int),
-                    Box::new(Term::Int(0)),
-                    Box::new(Term::Let(
-                        (code_var.clone(), Type::Int),
-                        Box::new(Term::Get(f.clone(), zero_var)),
-                        Box::new(Term::TailCallDynamic(code_var.clone())),
-                    )),
-                );
+                let call = Term::TailCallDynamic(f.clone());
 
-                // Chain Pushes
-                let mut res = get_op;
+                let mut res = call;
                 for op in push_ops.into_iter().rev() {
                     let dummy = id::gentmp(&Type::Unit);
                     res = Term::Let((dummy, Type::Unit), Box::new(op), Box::new(res));
@@ -336,54 +361,23 @@ impl Converter {
             }
             CpsTerm::AppDir(l, args) => {
                 // AppDir(l, args)
-                // args includes k_cls? Yes usually.
-                // Do we pass Self?
-                // Top-level functions don't use Self?
-                // But `f` in `cps.rs` added `self_env` to ALL functions.
-                // So `AppDir` targets must also accept `self_env`.
-                // But what is `self_env` for a direct call?
-                // Use `0` (Unit/Null)?
-
-                // Wait, `cps.rs` `AppDir` handling: `app_args.push(k_cls)`.
-                // `cps.rs` did NOT add `self` to `AppDir` args.
-                // BUT `f` (defs) logic added `self` to args of ALL functions.
-                // This is a mismatch.
-                // If I change a function signature, I must update all call sites.
-                // `AppDir` calls a label.
-                // That label corresponds to a function converted by `f`.
-                // So it EXPECTS `self`.
-                // So I MUST push a dummy `self` for `AppDir`.
-
-                let mut all_args = args.clone();
-                // Push dummy self (0)
-                let dummy_self = id::gentmp(&Type::Int);
-                all_args.push(dummy_self.clone());
-
-                // We need to define `dummy_self = 0` before pushing.
+                // Just Push args and Jump.
+                // NO Dummy Self. FVs (if any) are assumed on Stack (if recursive) or Empty (global).
 
                 let mut push_ops = Vec::new();
-                for arg in all_args {
-                    push_ops.push(Term::Push(arg));
+                for arg in args {
+                    push_ops.push(Term::Push(arg.clone()));
                 }
 
                 let call = Term::TailCallBlock(l.clone());
 
                 let mut res = call;
                 for op in push_ops.into_iter().rev() {
-                    // If op is Push(dummy_self), ensure dummy_self is defined?
-                    // No, `Push(arg)` assumes arg is bound.
-                    // We need to bind `dummy_self` globally for this block?
-                    // Or wrap.
                     let dummy = id::gentmp(&Type::Unit);
                     res = Term::Let((dummy, Type::Unit), Box::new(op), Box::new(res));
                 }
 
-                // Wrap with `Let dummy_self = 0`
-                Term::Let(
-                    (dummy_self, Type::Int),
-                    Box::new(Term::Int(0)),
-                    Box::new(res),
-                )
+                res
             }
         }
     }
@@ -402,7 +396,34 @@ impl Converter {
             CpsAtom::FSub(x, y) => Term::FSub(x.clone(), y.clone()),
             CpsAtom::FMul(x, y) => Term::FMul(x.clone(), y.clone()),
             CpsAtom::FDiv(x, y) => Term::FDiv(x.clone(), y.clone()),
-            CpsAtom::Get(x, y) => Term::Get(x.clone(), y.clone()),
+            CpsAtom::Get(x, y) => {
+                // Optimization: If x is Self, resolve to FV Variable
+                eprintln!(
+                    "DEBUG: convert_atom Get({}, {}) self={:?}",
+                    x, y, self.current_self
+                );
+                if let Some((self_var, func_label, fvs)) = &self.current_self {
+                    if x == self_var {
+                        // Resolve y value
+                        if let Some(idx) = self.constants.get(y) {
+                            // MinCaml closure layout: [CodePtr, FV1, FV2...]
+                            // index 0 is CodePtr.
+                            // fvs list corresponds to 1, 2, ...
+                            // So array index i maps to fvs[i-1].
+                            let i = *idx as usize;
+                            if i == 0 {
+                                // Accessing Code Pointer -> Return Label
+                                return Term::LoadLabel(func_label.clone());
+                            } else if i > 0 && i <= fvs.len() {
+                                return Term::Var(fvs[i - 1].clone());
+                            } else {
+                                // Out of bounds.
+                            }
+                        }
+                    }
+                }
+                Term::Get(x.clone(), y.clone())
+            }
             CpsAtom::Put(x, y, z) => Term::Put(x.clone(), y.clone(), z.clone()),
             CpsAtom::ExtArray(x) => Term::ExtArray(x.clone()),
             CpsAtom::Tuple(xs) => Term::Tuple(xs.clone()),
@@ -476,7 +497,14 @@ pub fn f(prog: &CpsProg) -> Prog {
         // If formal_fv is missing, we can't emit GetEnv.
 
         // Prepend loading of arguments
-        for (i, (arg, ty)) in fundef.args.iter().enumerate() {
+        // 1. Strip implicit Self argument (last arg)
+        let mut real_args = fundef.args.clone();
+        if !real_args.is_empty() {
+            real_args.pop(); // Remove Self
+        }
+
+        // 2. Pop remaining arguments in REVERSE order (Stack is LIFO)
+        for (arg, ty) in real_args.into_iter().rev() {
             func_term = Term::Let(
                 (arg.clone(), ty.clone()),
                 Box::new(Term::Pop(arg.clone())),

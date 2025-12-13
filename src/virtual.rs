@@ -30,6 +30,7 @@ pub enum Operation {
     Store(u32, u32),           // *dest = src (Indirect Write)
     Push(u32),                 // [sp] = *src; sp += 32
     Pop(u32),                  // sp -= 32; *dest = [sp]
+    Halt,                      // Stop execution
 }
 
 #[derive(Debug)]
@@ -196,7 +197,11 @@ fn analyze_term(term: &Term, constants: &mut HashMap<id::T, ConstVal>) {
             analyze_term(e, constants);
         }
         Term::LetTuple(_, _, e) => analyze_term(e, constants),
-        Term::IfEq(_, _, _, _) | Term::IfLE(_, _, _, _) | Term::Jump(_) | Term::JumpVar(_) => {}
+        Term::IfEq(_, _, _, _)
+        | Term::IfLE(_, _, _, _)
+        | Term::Jump(_)
+        | Term::JumpVar(_)
+        | Term::CallExternal(_) => {}
         Term::Atom(_) => {}
     }
 }
@@ -242,7 +247,10 @@ fn convert_term(
             );
         }
         Term::Jump(l) => {
-            if let Some(target_idx) = block_map.get(l) {
+            eprintln!("DEBUG: Jump Label: {:?}", l);
+            if l == "halt" {
+                ops.push(Operation::Halt);
+            } else if let Some(target_idx) = block_map.get(l) {
                 ops.push(Operation::Jump(*target_idx as u32));
             } else if let Some(offset) = var_map.get(l) {
                 let addr = (var_start + offset * 32) as u32;
@@ -254,6 +262,9 @@ fn convert_term(
         Term::JumpVar(x) => {
             let addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
             ops.push(Operation::JumpVar(addr));
+        }
+        Term::CallExternal(l) => {
+            ops.push(Operation::CallExternal(l.clone()));
         }
         Term::IfEq(x, y, l1, l2) => {
             let addr_x = (var_start + var_map.get(x).unwrap() * 32) as u32;
@@ -384,8 +395,23 @@ fn convert_atom(
         }
         Atom::Get(x, y) => {
             // Logic for Get (Array/Tuple access)
-            // Using logic from previous view
-            let addr_x = (var_start + var_map.get(x).unwrap() * 32) as u32;
+            // Optimization: If x is Self, resolve to FV Variable
+            // eprintln!("DEBUG: convert_atom Get({}, {}) self={:?}", x, y, self.current_self);
+            // This block seems to be from a different context (e.g., CPS conversion)
+            // and is syntactically incorrect here.
+            // Assuming the user wants to insert it as is, it will cause a compilation error.
+            // CpsAtom::Get(x, y) => {
+            //     if let Some((self_var, func_label, fvs)) = &self.current_self {
+            //         if x == self_var {
+            //             // Resolve y valueriable not found in var_map: {}", x)
+            //         }
+            //     }
+            // }
+            let addr_x = (var_start
+                + match var_map.get(x) {
+                    Some(v) => *v,
+                    None => panic!("Get: Variable not found in var_map: {}", x),
+                } * 32) as u32;
             let dest_addr = dest_addr;
 
             let mut optim_success = false;
@@ -433,7 +459,13 @@ fn convert_atom(
             ops.push(Operation::SetImm(dest_addr, 0));
         }
         Atom::Push(x) => {
-            let src_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
+            let src_addr = (var_start
+                + match var_map.get(x) {
+                    Some(v) => *v,
+                    None => {
+                        panic!("Push: Variable not found in var_map: {}", x);
+                    }
+                } * 32) as u32;
             ops.push(Operation::Push(src_addr));
             ops.push(Operation::SetImm(dest_addr, 0));
         }
@@ -474,6 +506,7 @@ impl fmt::Display for Operation {
             Operation::Store(dest, src) => write!(f, "Store({}, {})", dest, src),
             Operation::Push(src) => write!(f, "Push({})", src),
             Operation::Pop(dest) => write!(f, "Pop({})", dest),
+            Operation::Halt => write!(f, "Halt"),
         }
     }
 }

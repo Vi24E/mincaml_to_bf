@@ -1,30 +1,50 @@
 warning: unused import: `self`
- --> src/blocked.rs:1:18
+ --> src/intermediate.rs:2:22
   |
-1 | use crate::cps::{self, Atom as CpsAtom, Prog as CpsProg, Term as CpsTerm};
-  |                  ^^^^
+2 | use crate::closure::{self, Prog as ...
+  |                      ^^^^
   |
   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
 
-warning: unused import: `self`
- --> src/intermediate.rs:2:22
+warning: unused import: `std::convert::TryInto`
+ --> src/virtual_interpreter.rs:2:5
   |
-2 | use crate::closure::{self, Prog as ClosureProg};
-  |                      ^^^^
+2 | use std::convert::TryInto;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Write` and `self`
+ --> src/virtual_interpreter.rs:3:15
+  |
+3 | use std::io::{self, Write};
+  |               ^^^^  ^^^^^
+
+warning: unused variable: `i`
+   --> src/blocked.rs:487:14
+    |
+487 |         for (i, (arg, ty)) in fun...
+    |              ^ help: if this is intentional, prefix it with an underscore: `_i`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `x`
+   --> src/intermediate.rs:150:32
+    |
+150 | ...erm::GetSp(x) => self.bind_ato...
+    |               ^ help: if this is intentional, prefix it with an underscore: `_x`
 
 warning: value assigned to `var_count` is never read
-   --> src/intermediate.rs:276:13
+   --> src/intermediate.rs:358:13
     |
-276 |     let mut var_count = 0; // Max var count across all functions (for glo...
+358 |     let mut var_count = 0; // Max...
     |             ^^^^^^^^^
     |
     = help: maybe it is overwritten before being read?
     = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
 
 warning: variable does not need to be mutable
-   --> src/intermediate.rs:299:9
+   --> src/intermediate.rs:381:9
     |
-299 |     let mut map_args = |func_name: &str, map: &mut HashMap<id::T, usize>,...
+381 |     let mut map_args = |func_name...
     |         ----^^^^^^^^
     |         |
     |         help: remove this `mut`
@@ -34,10 +54,9 @@ warning: variable does not need to be mutable
 warning: unused variable: `e1`
    --> src/k_normal.rs:101:28
     |
-101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
-    |                            ^^                           ^^
+101 | ...Eq(e1, e2) | syntax::Syntax::LE(e1, e...
+    |       ^^                           ^^
     |
-    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
 help: if this is intentional, prefix it with an underscore
     |
 101 |         syntax::Syntax::Eq(_e1, e2) | syntax::Syntax::LE(_e1, e2) => g(
@@ -46,8 +65,8 @@ help: if this is intentional, prefix it with an underscore
 warning: unused variable: `e2`
    --> src/k_normal.rs:101:32
     |
-101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
-    |                                ^^                           ^^
+101 | ...1, e2) | syntax::Syntax::LE(e1, e2) =...
+    |       ^^                           ^^
     |
 help: if this is intentional, prefix it with an underscore
     |
@@ -57,52 +76,237 @@ help: if this is intentional, prefix it with an underscore
 warning: unused variable: `args`
    --> src/k_normal.rs:209:25
     |
-209 |                     let args: Vec<id::T> = Vec::new();
-    |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_args`
+209 | ...       let args: Vec<id::T> = ...
+    |               ^^^^ help: if this is intentional, prefix it with an underscore: `_args`
 
-warning: unused variable: `reg_start`
-   --> src/virtual.rs:215:5
+warning: unused variable: `entry_idx`
+   --> src/virtual.rs:139:9
     |
-215 |     reg_start: usize,
-    |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_reg_start`
+139 |     let entry_idx = *block_map.ge...
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entry_idx`
+
+warning: unused variable: `i`
+   --> src/virtual.rs:141:10
+    |
+141 |     for (i, block) in sorted_bloc...
+    |          ^ help: if this is intentional, prefix it with an underscore: `_i`
+
+warning: unused variable: `l`
+   --> src/virtual.rs:444:24
+    |
+444 |         Atom::ExtArray(l) => {
+    |                        ^ help: if this is intentional, prefix it with an underscore: `_l`
+
+warning: unused variable: `addr`
+   --> src/virtual_interpreter.rs:193:34
+    |
+193 | ...:InputByte(addr) => {
+    |               ^^^^ help: if this is intentional, prefix it with an underscore: `_addr`
 
 warning: method `get_type` is never used
-  --> src/blocked.rs:56:8
+  --> src/blocked.rs:61:8
    |
-55 | impl Term {
+60 | impl Term {
    | --------- method in this implementation
-56 |     fn get_type(&self) -> Type {
+61 |     fn get_type(&self) -> Type {
    |        ^^^^^^^^
    |
    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
 
-warning: method `new_block_id` is never used
-   --> src/blocked.rs:102:8
+warning: field `closure_map` is never read
+   --> src/blocked.rs:107:5
     |
- 94 | impl Converter {
+105 | struct Converter {
+    |        --------- field in this struct
+106 |     blocks: Vec<Block>,
+107 |     closure_map: HashMap<id::T, (...
+    |     ^^^^^^^^^^^
+
+warning: method `new_block_id` is never used
+   --> src/blocked.rs:123:8
+    |
+113 | impl Converter {
     | -------------- method in this implementation
 ...
-102 |     fn new_block_id(&self) -> id::L {
+123 |     fn new_block_id(&self) -> id:...
     |        ^^^^^^^^^^^^
 
 warning: function `add_point` is never used
-   --> src/emit.rs:317:4
+   --> src/emit.rs:487:4
     |
-317 | fn add_point(bf_code: &mut String, n: u32) {
+487 | fn add_point(bf_code: &mut String...
     |    ^^^^^^^^^
 
 warning: function `sub_point` is never used
-   --> src/emit.rs:324:4
+   --> src/emit.rs:494:4
     |
-324 | fn sub_point(bf_code: &mut String, n: u32) {
+494 | fn sub_point(bf_code: &mut String...
     |    ^^^^^^^^^
 
 warning: function `iszero` is never used
-   --> src/emit.rs:497:4
+   --> src/emit.rs:667:4
     |
-497 | fn iszero(bf_code: &mut String, current_ptr: &mut u32, register: u32, buf...
+667 | fn iszero(bf_code: &mut String, c...
     |    ^^^^^^
 
-warning: `mincaml_to_bf` (lib) generated 13 warnings (run `cargo fix --lib -p mincaml_to_bf` to apply 3 suggestions)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.08s
-     Running `target/debug/mincaml_to_bf test3.ml`
+warning: field `func_arg_counts` is never read
+  --> src/intermediate.rs:61:5
+   |
+58 | struct Converter {
+   |        --------- field in this struct
+...
+61 |     func_arg_counts: HashMap<Strin...
+   |     ^^^^^^^^^^^^^^^
+
+warning: `mincaml_to_bf` (lib) generated 21 warnings (run `cargo fix --lib -p mincaml_to_bf` to apply 4 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running `target/debug/mincaml_to_bf -s test3_print.ml`
+DEBUG: convert_atom Get(self_env.25, Ti26) self=Some(("self_env.25", "k_if.24", []))
+DEBUG: convert_atom Get(self_env.37, Ti39) self=Some(("self_env.37", "k_cont.36", []))
+DEBUG: convert_atom Get(self_env.37, Ti38) self=Some(("self_env.37", "k_cont.36", []))
+DEBUG: convert_atom Get(self_env.32, Ti34) self=Some(("self_env.32", "k_cont.31", []))
+DEBUG: convert_atom Get(self_env.32, Ti33) self=Some(("self_env.32", "k_cont.31", []))
+DEBUG: Intermediate Prog:
+Entry: main
+Block Count: 10
+Var Count: 51
+Block Map:
+  main: 1
+  k_cont.43: 2
+  k_cont.46: 3
+  k_if.24: 4
+  k_cont.31: 5
+  k_cont.36: 6
+  block.66: 7
+  block.67: 8
+  fib.10: 9
+Var Map:
+  Tu42: 0
+  Tu49: 1
+  Tu41: 2
+  Ti2.20: 3
+  k_cont.43: 4
+  k_cls.45: 5
+  Tu51: 6
+  Tu50: 7
+  Ti1.19: 8
+  k_cont.46: 9
+  k_cls.48: 10
+  Tu53: 11
+  Tu52: 12
+  Ti23: 13
+  Ti26: 14
+  k.21: 15
+  Tu54: 16
+  Tu29: 17
+  Ti34: 18
+  k_cls.27: 19
+  Ti33: 20
+  Ti6.15: 21
+  Ti9.18: 22
+  Ti30: 23
+  Tu56: 24
+  Tu28: 25
+  Ti39: 26
+  n.11: 27
+  Ti38: 28
+  Ti7.16: 29
+  Ti8.17: 30
+  k_cont.31: 31
+  Tu60: 32
+  Tu59: 33
+  k_cls.35: 34
+  Tu58: 35
+  Tu57: 36
+  Tu55: 37
+  Ti4.13: 38
+  Ti5.14: 39
+  k_cont.36: 40
+  Tu64: 41
+  Tu63: 42
+  k_cls.40: 43
+  Tu62: 44
+  Tu61: 45
+  self_env.22: 46
+  Ti3.12: 47
+  k_if.24: 48
+  Tu65: 49
+k_cont.43:
+  Let (Tu42: int) = Pop in
+  Let (Tu49: unit) = Push(Tu42) in
+  Jump(halt)
+k_cont.46:
+  Let (Tu41: int) = Pop in
+  Let (Ti2.20: int) = Tu41 in
+  Let (k_cont.43: (int -> unit)) = LoadLabel(k_cont.43) in
+  Let (k_cls.45: (int -> unit)) = LoadLabel(k_cont.43) in
+  Let (Tu51: unit) = Push(Ti2.20) in
+  Let (Tu50: unit) = Push(k_cls.45) in
+  Jump(min_caml_print_int)
+main:
+  Let (Ti1.19: int) = 10 in
+  Let (k_cont.46: (int -> unit)) = LoadLabel(k_cont.46) in
+  Let (k_cls.48: (int -> unit)) = LoadLabel(k_cont.46) in
+  Let (Tu53: unit) = Push(Ti1.19) in
+  Let (Tu52: unit) = Push(k_cls.48) in
+  Jump(fib.10)
+k_if.24:
+  Let (Ti23: int) = Pop in
+  Let (Ti26: int) = 1 in
+  Let (k.21: int) = self_env.25[Ti26] in
+  Let (Tu54: unit) = Push(Ti23) in
+  JumpVar(k.21)
+k_cont.31:
+  Let (Tu29: int) = Pop in
+  Let (Ti34: int) = 1 in
+  Let (k_cls.27: int) = self_env.32[Ti34] in
+  Let (Ti33: int) = 2 in
+  Let (Ti6.15: int) = self_env.32[Ti33] in
+  Let (Ti9.18: int) = Tu29 in
+  Let (Ti30: int) = Ti6.15 + Ti9.18 in
+  Let (Tu56: unit) = Push(Ti30) in
+  JumpVar(k_cls.27)
+k_cont.36:
+  Let (Tu28: int) = Pop in
+  Let (Ti39: int) = 1 in
+  Let (n.11: int) = self_env.37[Ti39] in
+  Let (Ti38: int) = 2 in
+  Let (k_cls.27: int) = self_env.37[Ti38] in
+  Let (Ti6.15: int) = Tu28 in
+  Let (Ti7.16: int) = 2 in
+  Let (Ti8.17: int) = n.11 - Ti7.16 in
+  Let (k_cont.31: (int -> unit)) = LoadLabel(k_cont.31) in
+  Let (Tu60: unit) = Push(k_cls.27) in
+  Let (Tu59: unit) = Push(Ti6.15) in
+  Let (k_cls.35: (int -> unit)) = LoadLabel(k_cont.31) in
+  Let (Tu58: unit) = Push(Ti8.17) in
+  Let (Tu57: unit) = Push(k_cls.35) in
+  Jump(fib.10)
+block.66:
+  Let (Tu55: unit) = Push(n.11) in
+  JumpVar(k_cls.27)
+block.67:
+  Let (Ti4.13: int) = 1 in
+  Let (Ti5.14: int) = n.11 - Ti4.13 in
+  Let (k_cont.36: (int -> unit)) = LoadLabel(k_cont.36) in
+  Let (Tu64: unit) = Push(n.11) in
+  Let (Tu63: unit) = Push(k_cls.27) in
+  Let (k_cls.40: (int -> unit)) = LoadLabel(k_cont.36) in
+  Let (Tu62: unit) = Push(Ti5.14) in
+  Let (Tu61: unit) = Push(k_cls.40) in
+  Jump(fib.10)
+fib.10:
+  Let (self_env.22: int) = Pop in
+  Let (k.21: (unit -> unit)) = Pop in
+  Let (n.11: int) = Pop in
+  Let (Ti3.12: int) = 1 in
+  Let (k_if.24: (int -> unit)) = LoadLabel(k_if.24) in
+  Let (Tu65: unit) = Push(k.21) in
+  Let (k_cls.27: int) = LoadLabel(k_if.24) in
+  IfLE(n.11, Ti3.12, Goto(block.66), Goto(block.67))
+
+DEBUG: Starting virtual::f
+
+thread 'main' (258330747) panicked at src/virtual.rs:402:29:
+Get: Variable not found in var_map: self_env.25
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

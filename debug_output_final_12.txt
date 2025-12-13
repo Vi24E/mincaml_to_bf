@@ -1,0 +1,818 @@
+   Compiling mincaml_to_bf v0.1.0 (/Users/koharayu/Desktop/大学/cpu実験/mincaml_to_bf)
+warning: unused import: `self`
+ --> src/intermediate.rs:2:22
+  |
+2 | use crate::closure::{self, Prog as ClosureProg};
+  |                      ^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `std::convert::TryInto`
+ --> src/virtual_interpreter.rs:2:5
+  |
+2 | use std::convert::TryInto;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Write` and `self`
+ --> src/virtual_interpreter.rs:3:15
+  |
+3 | use std::io::{self, Write};
+  |               ^^^^  ^^^^^
+
+warning: unused variable: `i`
+   --> src/blocked.rs:488:14
+    |
+488 |         for (i, (arg, ty)) in fundef.args.iter().enumerate() {
+    |              ^ help: if this is intentional, prefix it with an underscore: `_i`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `x`
+   --> src/intermediate.rs:150:32
+    |
+150 |             BlockedTerm::GetSp(x) => self.bind_atom(Atom::GetSp, dest, next),
+    |                                ^ help: if this is intentional, prefix it with an underscore: `_x`
+
+warning: value assigned to `block_count` is never read
+   --> src/intermediate.rs:360:13
+    |
+360 |     let mut block_count = 0;
+    |             ^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `var_count` is never read
+   --> src/intermediate.rs:361:13
+    |
+361 |     let mut var_count = 0; // Max var count across all functions (for global stats, if needed)
+    |             ^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `entry_label`
+   --> src/intermediate.rs:356:5
+    |
+356 |     entry_label: &id::L,
+    |     ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entry_label`
+
+warning: variable does not need to be mutable
+   --> src/intermediate.rs:378:9
+    |
+378 |     let mut map_args = |func_name: &str, map: &mut HashMap<id::T, usize>, count: &mut usize| {
+    |         ----^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `e1`
+   --> src/k_normal.rs:101:28
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                            ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(_e1, e2) | syntax::Syntax::LE(_e1, e2) => g(
+    |                            +                             +
+
+warning: unused variable: `e2`
+   --> src/k_normal.rs:101:32
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                                ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(e1, _e2) | syntax::Syntax::LE(e1, _e2) => g(
+    |                                +                             +
+
+warning: unused variable: `args`
+   --> src/k_normal.rs:209:25
+    |
+209 |                     let args: Vec<id::T> = Vec::new();
+    |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_args`
+
+warning: unused variable: `entry_idx`
+   --> src/virtual.rs:139:9
+    |
+139 |     let entry_idx = *block_map.get(&prog.entry).unwrap(); // Should be 1
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entry_idx`
+
+warning: unused variable: `i`
+   --> src/virtual.rs:141:10
+    |
+141 |     for (i, block) in sorted_blocks {
+    |          ^ help: if this is intentional, prefix it with an underscore: `_i`
+
+warning: unused variable: `l`
+   --> src/virtual.rs:429:24
+    |
+429 |         Atom::ExtArray(l) => {
+    |                        ^ help: if this is intentional, prefix it with an underscore: `_l`
+
+warning: unused variable: `self_ptr`
+   --> src/virtual_interpreter.rs:163:25
+    |
+163 |                     let self_ptr = self.read_int(sp - 32);
+    |                         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_self_ptr`
+
+warning: unused variable: `addr`
+   --> src/virtual_interpreter.rs:203:34
+    |
+203 |             Operation::InputByte(addr) => {
+    |                                  ^^^^ help: if this is intentional, prefix it with an underscore: `_addr`
+
+warning: method `get_type` is never used
+  --> src/blocked.rs:61:8
+   |
+60 | impl Term {
+   | --------- method in this implementation
+61 |     fn get_type(&self) -> Type {
+   |        ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `closure_map` is never read
+   --> src/blocked.rs:107:5
+    |
+105 | struct Converter {
+    |        --------- field in this struct
+106 |     blocks: Vec<Block>,
+107 |     closure_map: HashMap<id::T, (id::L, Vec<id::T>)>, // Var -> (Label, FVs)
+    |     ^^^^^^^^^^^
+
+warning: method `new_block_id` is never used
+   --> src/blocked.rs:129:8
+    |
+114 | impl Converter {
+    | -------------- method in this implementation
+...
+129 |     fn new_block_id(&self) -> id::L {
+    |        ^^^^^^^^^^^^
+
+warning: function `add_point` is never used
+   --> src/emit.rs:494:4
+    |
+494 | fn add_point(bf_code: &mut String, n: u32) {
+    |    ^^^^^^^^^
+
+warning: function `sub_point` is never used
+   --> src/emit.rs:501:4
+    |
+501 | fn sub_point(bf_code: &mut String, n: u32) {
+    |    ^^^^^^^^^
+
+warning: function `iszero` is never used
+   --> src/emit.rs:674:4
+    |
+674 | fn iszero(bf_code: &mut String, current_ptr: &mut u32, register: u32, buffer: u32, dest: u32) {
+    |    ^^^^^^
+
+warning: `mincaml_to_bf` (lib) generated 23 warnings (run `cargo fix --lib -p mincaml_to_bf` to apply 4 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.19s
+     Running `target/debug/mincaml_to_bf -s test2.ml`
+DEBUG: LetRec func: k_cont.53, args: [("Tu48", Int), ("self_env.54", Int)], current_self: Some("self_env.54")
+DEBUG: LetRec func: k_cont.50, args: [("Tu49", Int), ("self_env.51", Int)], current_self: Some("self_env.51")
+DEBUG: LetRec func: k_if.28, args: [("Ti27", Int), ("self_env.29", Int)], current_self: Some("self_env.29")
+DEBUG: LetRec func: k_cont.41, args: [("Tu32", Int), ("self_env.42", Int)], current_self: Some("self_env.42")
+DEBUG: LetRec func: k_cont.35, args: [("Tu33", Int), ("self_env.36", Int)], current_self: Some("self_env.36")
+DEBUG: Intermediate Prog:
+Entry: main
+Block Count: 10
+Var Count: 96
+Block Map:
+  prelude: 0
+  k_cont.50: 1
+  k_cont.53: 2
+  main: 3
+  k_if.28: 4
+  k_cont.35: 5
+  k_cont.41: 6
+  block.111: 7
+  block.112: 8
+  fib_alt.12: 9
+Var Map:
+  Tu49: 0
+  self_env.51: 1
+  Tu58: 2
+  Ti56: 3
+  Tu57: 4
+  Tu48: 5
+  self_env.54: 6
+  Ti2.24: 7
+  Ti63: 8
+  k_cls.52: 9
+  Tu64: 10
+  Tu62: 11
+  Tu61: 12
+  Ti59: 13
+  Tu60: 14
+  k.11: 15
+  Ti73: 16
+  fib_alt.12: 17
+  Tu74: 18
+  Tu72: 19
+  Ti1.23: 20
+  Ti70: 21
+  k_cls.55: 22
+  Tu71: 23
+  Ti66: 24
+  Ti65: 25
+  Tu69: 26
+  Tu68: 27
+  Tu67: 28
+  Ti27: 29
+  self_env.29: 30
+  Ti30: 31
+  k.25: 32
+  Ti76: 33
+  Ti75: 34
+  Tu78: 35
+  Tu77: 36
+  Tu33: 37
+  self_env.36: 38
+  Ti39: 39
+  k_cls.31: 40
+  Ti38: 41
+  Ti37: 42
+  Ti6.17: 43
+  Ti9.20: 44
+  Ti10.21: 45
+  x.22: 46
+  Ti34: 47
+  Ti84: 48
+  Ti83: 49
+  Tu86: 50
+  Tu85: 51
+  Tu32: 52
+  self_env.42: 53
+  Ti46: 54
+  Ti45: 55
+  n.13: 56
+  Ti44: 57
+  Ti43: 58
+  Ti7.18: 59
+  Ti8.19: 60
+  Ti95: 61
+  k_cls.40: 62
+  Tu96: 63
+  Tu94: 64
+  Tu93: 65
+  Tu92: 66
+  Ti88: 67
+  Ti87: 68
+  Tu91: 69
+  Tu90: 70
+  Tu89: 71
+  Ti80: 72
+  Ti79: 73
+  Tu82: 74
+  Tu81: 75
+  Ti4.15: 76
+  Ti5.16: 77
+  Ti106: 78
+  k_cls.47: 79
+  Tu107: 80
+  Tu105: 81
+  Tu104: 82
+  Tu103: 83
+  Tu102: 84
+  Ti98: 85
+  Ti97: 86
+  Tu101: 87
+  Tu100: 88
+  Tu99: 89
+  self_env.26: 90
+  Ti3.14: 91
+  Ti109: 92
+  Tu110: 93
+  Tu108: 94
+prelude:
+  Jump(main)
+k_cont.50:
+  Let (Tu49: int) = Pop in
+  Let (self_env.51: int) = Pop in
+  Let (Tu58: unit) = Push(Tu49) in
+  Let (Ti56: int) = 0 in
+  Let (Tu57: unit) = Push(Ti56) in
+  Jump(halt)
+k_cont.53:
+  Let (Tu48: int) = Pop in
+  Let (self_env.54: int) = Pop in
+  Let (Ti2.24: int) = Tu48 in
+  Let (Ti63: int) = LoadLabel(k_cont.50) in
+  Let (k_cls.52: (int -> unit)) = GetSp in
+  Let (Tu64: unit) = Push(Ti63) in
+  Let (Tu62: unit) = Push(Ti2.24) in
+  Let (Tu61: unit) = Push(k_cls.52) in
+  Let (Ti59: int) = 0 in
+  Let (Tu60: unit) = Push(Ti59) in
+  Jump(min_caml_print_int)
+main:
+  Let (k.11: int) = 42 in
+  Let (Ti73: int) = LoadLabel(fib_alt.12) in
+  Let (fib_alt.12: (int -> int)) = GetSp in
+  Let (Tu74: unit) = Push(Ti73) in
+  Let (Tu72: unit) = Push(k.11) in
+  Let (Ti1.23: int) = 10 in
+  Let (Ti70: int) = LoadLabel(k_cont.53) in
+  Let (k_cls.55: (int -> unit)) = GetSp in
+  Let (Tu71: unit) = Push(Ti70) in
+  Let (Ti66: int) = 0 in
+  Let (Ti65: int) = fib_alt.12[Ti66] in
+  Let (Tu69: unit) = Push(Ti1.23) in
+  Let (Tu68: unit) = Push(k_cls.55) in
+  Let (Tu67: unit) = Push(fib_alt.12) in
+  JumpVar(Ti65)
+k_if.28:
+  Let (Ti27: int) = Pop in
+  Let (self_env.29: int) = Pop in
+  Let (Ti30: int) = 1 in
+  Let (k.25: int) = self_env.29[Ti30] in
+  Let (Ti76: int) = 0 in
+  Let (Ti75: int) = k.25[Ti76] in
+  Let (Tu78: unit) = Push(Ti27) in
+  Let (Tu77: unit) = Push(k.25) in
+  JumpVar(Ti75)
+k_cont.35:
+  Let (Tu33: int) = Pop in
+  Let (self_env.36: int) = Pop in
+  Let (Ti39: int) = 1 in
+  Let (k_cls.31: int) = self_env.36[Ti39] in
+  Let (Ti38: int) = 2 in
+  Let (k.11: int) = self_env.36[Ti38] in
+  Let (Ti37: int) = 3 in
+  Let (Ti6.17: int) = self_env.36[Ti37] in
+  Let (Ti9.20: int) = Tu33 in
+  Let (Ti10.21: int) = Ti6.17 + Ti9.20 in
+  Let (x.22: int) = Ti10.21 + k.11 in
+  Let (Ti34: int) = x.22 + x.22 in
+  Let (Ti84: int) = 0 in
+  Let (Ti83: int) = k_cls.31[Ti84] in
+  Let (Tu86: unit) = Push(Ti34) in
+  Let (Tu85: unit) = Push(k_cls.31) in
+  JumpVar(Ti83)
+k_cont.41:
+  Let (Tu32: int) = Pop in
+  Let (self_env.42: int) = Pop in
+  Let (Ti46: int) = 1 in
+  Let (k_cls.31: int) = self_env.42[Ti46] in
+  Let (Ti45: int) = 2 in
+  Let (n.13: int) = self_env.42[Ti45] in
+  Let (Ti44: int) = 3 in
+  Let (fib_alt.12: int) = self_env.42[Ti44] in
+  Let (Ti43: int) = 4 in
+  Let (k.11: int) = self_env.42[Ti43] in
+  Let (Ti6.17: int) = Tu32 in
+  Let (Ti7.18: int) = 2 in
+  Let (Ti8.19: int) = n.13 - Ti7.18 in
+  Let (Ti95: int) = LoadLabel(k_cont.35) in
+  Let (k_cls.40: (int -> unit)) = GetSp in
+  Let (Tu96: unit) = Push(Ti95) in
+  Let (Tu94: unit) = Push(k_cls.31) in
+  Let (Tu93: unit) = Push(k.11) in
+  Let (Tu92: unit) = Push(Ti6.17) in
+  Let (Ti88: int) = 0 in
+  Let (Ti87: int) = fib_alt.12[Ti88] in
+  Let (Tu91: unit) = Push(Ti8.19) in
+  Let (Tu90: unit) = Push(k_cls.40) in
+  Let (Tu89: unit) = Push(fib_alt.12) in
+  JumpVar(Ti87)
+block.111:
+  Let (Ti80: int) = 0 in
+  Let (Ti79: int) = k_cls.31[Ti80] in
+  Let (Tu82: unit) = Push(n.13) in
+  Let (Tu81: unit) = Push(k_cls.31) in
+  JumpVar(Ti79)
+block.112:
+  Let (Ti4.15: int) = 1 in
+  Let (Ti5.16: int) = n.13 - Ti4.15 in
+  Let (Ti106: int) = LoadLabel(k_cont.41) in
+  Let (k_cls.47: (int -> unit)) = GetSp in
+  Let (Tu107: unit) = Push(Ti106) in
+  Let (Tu105: unit) = Push(k_cls.31) in
+  Let (Tu104: unit) = Push(n.13) in
+  Let (Tu103: unit) = Push(fib_alt.12) in
+  Let (Tu102: unit) = Push(k.11) in
+  Let (Ti98: int) = 0 in
+  Let (Ti97: int) = fib_alt.12[Ti98] in
+  Let (Tu101: unit) = Push(Ti5.16) in
+  Let (Tu100: unit) = Push(k_cls.47) in
+  Let (Tu99: unit) = Push(fib_alt.12) in
+  JumpVar(Ti97)
+fib_alt.12:
+  Let (self_env.26: int) = Pop in
+  Let (k.25: (unit -> unit)) = Pop in
+  Let (n.13: int) = Pop in
+  Let (Ti3.14: int) = 1 in
+  Let (Ti109: int) = LoadLabel(k_if.28) in
+  Let (k_cls.31: int) = GetSp in
+  Let (Tu110: unit) = Push(Ti109) in
+  Let (Tu108: unit) = Push(k.25) in
+  IfLE(n.13, Ti3.14, Goto(block.111), Goto(block.112))
+
+DEBUG: Starting virtual::f
+DEBUG: Virtual Prog generated. Blocks: 10
+DEBUG: Virtual Program:
+Virtual Prog:
+Block Count: 10
+Var Count: 96
+Block 0:
+  Jump(3)
+Block 1:
+  Pop(150)
+  Pop(182)
+  Push(150)
+  SetImm(214, 0)
+  SetImm(246, 0)
+  Push(246)
+  SetImm(278, 0)
+  CallExternal(halt)
+Block 2:
+  Pop(310)
+  Pop(342)
+  MoveData(374, 310, 32)
+  SetImm(406, 1)
+  MoveData(438, 22, 32)
+  Push(406)
+  SetImm(470, 0)
+  Push(374)
+  SetImm(502, 0)
+  Push(438)
+  SetImm(534, 0)
+  SetImm(566, 0)
+  Push(566)
+  SetImm(598, 0)
+  CallExternal(min_caml_print_int)
+Block 3:
+  SetImm(630, 42)
+  SetImm(662, 9)
+  MoveData(694, 22, 32)
+  Push(662)
+  SetImm(726, 0)
+  Push(630)
+  SetImm(758, 0)
+  SetImm(790, 10)
+  SetImm(822, 2)
+  MoveData(854, 22, 32)
+  Push(822)
+  SetImm(886, 0)
+  SetImm(918, 0)
+  MoveData(86, 918, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 694, 86)
+  Load(950, 86)
+  Push(790)
+  SetImm(982, 0)
+  Push(854)
+  SetImm(1014, 0)
+  Push(694)
+  SetImm(1046, 0)
+  JumpVar(950)
+Block 4:
+  Pop(1078)
+  Pop(1110)
+  SetImm(1142, 1)
+  MoveData(86, 1142, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1110, 86)
+  Load(1174, 86)
+  SetImm(1206, 0)
+  MoveData(86, 1206, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1174, 86)
+  Load(1238, 86)
+  Push(1078)
+  SetImm(1270, 0)
+  Push(1174)
+  SetImm(1302, 0)
+  JumpVar(1238)
+Block 5:
+  Pop(1334)
+  Pop(1366)
+  SetImm(1398, 1)
+  MoveData(86, 1398, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1366, 86)
+  Load(1430, 86)
+  SetImm(1462, 2)
+  MoveData(86, 1462, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1366, 86)
+  Load(630, 86)
+  SetImm(1494, 3)
+  MoveData(86, 1494, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1366, 86)
+  Load(1526, 86)
+  MoveData(1558, 1334, 32)
+  Add(1590, 1526, 1558)
+  Add(1622, 1590, 630)
+  Add(1654, 1622, 1622)
+  SetImm(1686, 0)
+  MoveData(86, 1686, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1430, 86)
+  Load(1718, 86)
+  Push(1654)
+  SetImm(1750, 0)
+  Push(1430)
+  SetImm(1782, 0)
+  JumpVar(1718)
+Block 6:
+  Pop(1814)
+  Pop(1846)
+  SetImm(1878, 1)
+  MoveData(86, 1878, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1846, 86)
+  Load(1430, 86)
+  SetImm(1910, 2)
+  MoveData(86, 1910, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1846, 86)
+  Load(1942, 86)
+  SetImm(1974, 3)
+  MoveData(86, 1974, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1846, 86)
+  Load(694, 86)
+  SetImm(2006, 4)
+  MoveData(86, 2006, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1846, 86)
+  Load(630, 86)
+  MoveData(1526, 1814, 32)
+  SetImm(2038, 2)
+  Sub(2070, 1942, 2038)
+  SetImm(2102, 5)
+  MoveData(2134, 22, 32)
+  Push(2102)
+  SetImm(2166, 0)
+  Push(1430)
+  SetImm(2198, 0)
+  Push(630)
+  SetImm(2230, 0)
+  Push(1526)
+  SetImm(2262, 0)
+  SetImm(2294, 0)
+  MoveData(86, 2294, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 694, 86)
+  Load(2326, 86)
+  Push(2070)
+  SetImm(2358, 0)
+  Push(2134)
+  SetImm(2390, 0)
+  Push(694)
+  SetImm(2422, 0)
+  JumpVar(2326)
+Block 7:
+  SetImm(2454, 0)
+  MoveData(86, 2454, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 1430, 86)
+  Load(2486, 86)
+  Push(1942)
+  SetImm(2518, 0)
+  Push(1430)
+  SetImm(2550, 0)
+  JumpVar(2486)
+Block 8:
+  SetImm(2582, 1)
+  Sub(2614, 1942, 2582)
+  SetImm(2646, 6)
+  MoveData(2678, 22, 32)
+  Push(2646)
+  SetImm(2710, 0)
+  Push(1430)
+  SetImm(2742, 0)
+  Push(1942)
+  SetImm(2774, 0)
+  Push(694)
+  SetImm(2806, 0)
+  Push(630)
+  SetImm(2838, 0)
+  SetImm(2870, 0)
+  MoveData(86, 2870, 32)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 86, 86)
+  Add(86, 694, 86)
+  Load(2902, 86)
+  Push(2614)
+  SetImm(2934, 0)
+  Push(2678)
+  SetImm(2966, 0)
+  Push(694)
+  SetImm(2998, 0)
+  JumpVar(2902)
+Block 9:
+  Pop(3030)
+  Pop(1174)
+  Pop(1942)
+  SetImm(3062, 1)
+  SetImm(3094, 4)
+  MoveData(1430, 22, 32)
+  Push(3094)
+  SetImm(3126, 0)
+  Push(1174)
+  SetImm(3158, 0)
+  Sub(3190, 1942, 3062)
+  JumpIfLE(3190, 7, 8)
+
+DEBUG: Executing Block 0
+DEBUG: Executing Block 3
+DEBUG: Push val=9 (from 662) to SP=3222
+DEBUG: Push val=42 (from 630) to SP=3254
+DEBUG: Push val=2 (from 822) to SP=3286
+DEBUG: Load dest=950 val=9 (from addr=3222)
+DEBUG: Push val=10 (from 790) to SP=3318
+DEBUG: Push val=3286 (from 854) to SP=3350
+DEBUG: Push val=3222 (from 694) to SP=3382
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=3318
+DEBUG: Push val=3286 (from 1174) to SP=3350
+DEBUG: Executing Block 8
+DEBUG: Push val=6 (from 2646) to SP=3382
+DEBUG: Push val=3318 (from 1430) to SP=3414
+DEBUG: Push val=10 (from 1942) to SP=3446
+DEBUG: Push val=3222 (from 694) to SP=3478
+DEBUG: Push val=42 (from 630) to SP=3510
+DEBUG: Load dest=2902 val=9 (from addr=3222)
+DEBUG: Push val=9 (from 2614) to SP=3542
+DEBUG: Push val=3382 (from 2678) to SP=3574
+DEBUG: Push val=3222 (from 694) to SP=3606
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=3542
+DEBUG: Push val=3382 (from 1174) to SP=3574
+DEBUG: Executing Block 8
+DEBUG: Push val=6 (from 2646) to SP=3606
+DEBUG: Push val=3542 (from 1430) to SP=3638
+DEBUG: Push val=9 (from 1942) to SP=3670
+DEBUG: Push val=3222 (from 694) to SP=3702
+DEBUG: Push val=42 (from 630) to SP=3734
+DEBUG: Load dest=2902 val=9 (from addr=3222)
+DEBUG: Push val=8 (from 2614) to SP=3766
+DEBUG: Push val=3606 (from 2678) to SP=3798
+DEBUG: Push val=3222 (from 694) to SP=3830
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=3766
+DEBUG: Push val=3606 (from 1174) to SP=3798
+DEBUG: Executing Block 8
+DEBUG: Push val=6 (from 2646) to SP=3830
+DEBUG: Push val=3766 (from 1430) to SP=3862
+DEBUG: Push val=8 (from 1942) to SP=3894
+DEBUG: Push val=3222 (from 694) to SP=3926
+DEBUG: Push val=42 (from 630) to SP=3958
+DEBUG: Load dest=2902 val=9 (from addr=3222)
+DEBUG: Push val=7 (from 2614) to SP=3990
+DEBUG: Push val=3830 (from 2678) to SP=4022
+DEBUG: Push val=3222 (from 694) to SP=4054
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=3990
+DEBUG: Push val=3830 (from 1174) to SP=4022
+DEBUG: Executing Block 8
+DEBUG: Push val=6 (from 2646) to SP=4054
+DEBUG: Push val=3990 (from 1430) to SP=4086
+DEBUG: Push val=7 (from 1942) to SP=4118
+DEBUG: Push val=3222 (from 694) to SP=4150
+DEBUG: Push val=42 (from 630) to SP=4182
+DEBUG: Load dest=2902 val=9 (from addr=3222)
+DEBUG: Push val=6 (from 2614) to SP=4214
+DEBUG: Push val=4054 (from 2678) to SP=4246
+DEBUG: Push val=3222 (from 694) to SP=4278
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=4214
+DEBUG: Push val=4054 (from 1174) to SP=4246
+DEBUG: Executing Block 8
+DEBUG: Push val=6 (from 2646) to SP=4278
+DEBUG: Push val=4214 (from 1430) to SP=4310
+DEBUG: Push val=6 (from 1942) to SP=4342
+DEBUG: Push val=3222 (from 694) to SP=4374
+DEBUG: Push val=42 (from 630) to SP=4406
+DEBUG: Load dest=2902 val=9 (from addr=3222)
+DEBUG: Push val=5 (from 2614) to SP=4438
+DEBUG: Push val=4278 (from 2678) to SP=4470
+DEBUG: Push val=3222 (from 694) to SP=4502
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=4438
+DEBUG: Push val=4278 (from 1174) to SP=4470
+DEBUG: Executing Block 8
+DEBUG: Push val=6 (from 2646) to SP=4502
+DEBUG: Push val=4438 (from 1430) to SP=4534
+DEBUG: Push val=5 (from 1942) to SP=4566
+DEBUG: Push val=3222 (from 694) to SP=4598
+DEBUG: Push val=42 (from 630) to SP=4630
+DEBUG: Load dest=2902 val=9 (from addr=3222)
+DEBUG: Push val=4 (from 2614) to SP=4662
+DEBUG: Push val=4502 (from 2678) to SP=4694
+DEBUG: Push val=3222 (from 694) to SP=4726
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=4662
+DEBUG: Push val=4502 (from 1174) to SP=4694
+DEBUG: Executing Block 8
+DEBUG: Push val=6 (from 2646) to SP=4726
+DEBUG: Push val=4662 (from 1430) to SP=4758
+DEBUG: Push val=4 (from 1942) to SP=4790
+DEBUG: Push val=3222 (from 694) to SP=4822
+DEBUG: Push val=42 (from 630) to SP=4854
+DEBUG: Load dest=2902 val=9 (from addr=3222)
+DEBUG: Push val=3 (from 2614) to SP=4886
+DEBUG: Push val=4726 (from 2678) to SP=4918
+DEBUG: Push val=3222 (from 694) to SP=4950
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=4886
+DEBUG: Push val=4726 (from 1174) to SP=4918
+DEBUG: Executing Block 8
+DEBUG: Push val=6 (from 2646) to SP=4950
+DEBUG: Push val=4886 (from 1430) to SP=4982
+DEBUG: Push val=3 (from 1942) to SP=5014
+DEBUG: Push val=3222 (from 694) to SP=5046
+DEBUG: Push val=42 (from 630) to SP=5078
+DEBUG: Load dest=2902 val=9 (from addr=3222)
+DEBUG: Push val=2 (from 2614) to SP=5110
+DEBUG: Push val=4950 (from 2678) to SP=5142
+DEBUG: Push val=3222 (from 694) to SP=5174
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=5110
+DEBUG: Push val=4950 (from 1174) to SP=5142
+DEBUG: Executing Block 8
+DEBUG: Push val=6 (from 2646) to SP=5174
+DEBUG: Push val=5110 (from 1430) to SP=5206
+DEBUG: Push val=2 (from 1942) to SP=5238
+DEBUG: Push val=3222 (from 694) to SP=5270
+DEBUG: Push val=42 (from 630) to SP=5302
+DEBUG: Load dest=2902 val=9 (from addr=3222)
+DEBUG: Push val=1 (from 2614) to SP=5334
+DEBUG: Push val=5174 (from 2678) to SP=5366
+DEBUG: Push val=3222 (from 694) to SP=5398
+DEBUG: Executing Block 9
+DEBUG: Push val=4 (from 3094) to SP=5334
+DEBUG: Push val=5174 (from 1174) to SP=5366
+DEBUG: Executing Block 7
+DEBUG: Load dest=2486 val=4 (from addr=5334)
+DEBUG: Push val=1 (from 1942) to SP=5398
+DEBUG: Push val=5334 (from 1430) to SP=5430
+DEBUG: Executing Block 4
+DEBUG: Load dest=1174 val=2 (from addr=33)
+DEBUG: Load dest=1238 val=1365245952 (from addr=2)
+DEBUG: Push val=5334 (from 1078) to SP=5398
+DEBUG: Push val=2 (from 1174) to SP=5430
+Simulation Error: PC out of bounds: 1365245952

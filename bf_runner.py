@@ -1,7 +1,7 @@
 import sys
 
 def run_bf(code):
-    tape = [0] * 30000
+    tape = [0] * 1000000
     ptr = 0
     pc = 0
     loop_stack = []

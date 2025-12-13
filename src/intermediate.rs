@@ -53,6 +53,7 @@ pub enum Term {
     LetTuple(Vec<(id::T, Type)>, Atom, Box<Term>),
     Jump(id::L),    // Unconditional jump to Label
     JumpVar(id::T), // Unconditional jump to Variable (Dynamic)
+    CallExternal(String),
 }
 
 struct Converter {
@@ -173,7 +174,12 @@ impl Converter {
             }
             BlockedTerm::TailCallBlock(l) => {
                 // TailCallBlock(l) -> Jump(l)
-                Term::Jump(l.clone())
+                // Check if external call
+                if l == "print_int" || l == "min_caml_print_int" {
+                    Term::CallExternal(l.clone())
+                } else {
+                    Term::Jump(l.clone())
+                }
             }
             BlockedTerm::TailCallDynamic(x) => Term::JumpVar(x.clone()),
 
@@ -308,10 +314,11 @@ pub fn f(prog: &BlockedProg, closure_prog: &ClosureProg) -> Prog {
     let entry_label = prog.entry.clone();
 
     for block in &prog.blocks {
-        // Check if this block is a function entry
-        if converter.func_arg_counts.contains_key(&block.id) {
-            converter.current_func_args_len = *converter.func_arg_counts.get(&block.id).unwrap();
-        }
+        // Check if this is function entry - logic removed.
+        // blocked.rs handles Pop insertion.
+        // if converter.func_arg_counts.contains_key(&block.id) {
+        //     converter.current_func_args_len = *converter.func_arg_counts.get(&block.id).unwrap();
+        // }
 
         let term = converter.convert_term(&block.term, None, None);
         converter.add_block(block.id.clone(), term);
@@ -353,12 +360,12 @@ fn compute_layout(
 ) -> Layout {
     let mut block_map = HashMap::new();
     let mut var_map = HashMap::new();
-    let mut block_count = 1;
+    let mut block_count = 0;
     let mut var_count = 0; // Max var count across all functions (for global stats, if needed)
     let mut frame_sizes = HashMap::new();
 
-    // Ensure entry block is index 1
-    block_map.insert(entry_label.clone(), 1);
+    // Ensure entry block is index 0
+    block_map.insert(entry_label.clone(), 0);
     block_count += 1;
 
     // Assign block IDs globally
@@ -506,6 +513,7 @@ impl fmt::Display for Term {
             }
             Term::Jump(c) => write!(f, "Jump({})", c),
             Term::JumpVar(x) => write!(f, "JumpVar({})", x),
+            Term::CallExternal(l) => write!(f, "CallExternal({})", l),
         }
     }
 }

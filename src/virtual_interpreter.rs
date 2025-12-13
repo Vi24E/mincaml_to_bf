@@ -64,6 +64,11 @@ impl Simulator {
                 }
             }
 
+            // Standard PC increment if no Jump
+            if self.pc == current_pc {
+                self.pc += 1;
+            }
+
             self.steps += 1;
         }
 
@@ -78,6 +83,11 @@ impl Simulator {
         match op {
             Operation::SetImm(dest, val) => {
                 self.write_int(*dest as usize, *val);
+            }
+            Operation::Halt => {
+                // Stop execution
+                println!("Halt executed.");
+                panic!("HALT");
             }
             Operation::Neg(dest, src) => {
                 let val = self.read_int(*src as usize);
@@ -149,55 +159,39 @@ impl Simulator {
                     self.running = false;
                     // eprintln!("DEBUG: Halt called"); // Optional debug
                 } else if name == "print_int" || name == "min_caml_print_int" {
-                    // Update to match Stack Calling Convention.
-                    // Stack: [Values..., Arg, K, Self] (Top is Self)
-                    // We need to Pop Self, K, Arg.
+                    // Stack-Only Convention: [Val, K] (Top is K)
+                    // No Self.
 
                     let sp_addr = prog.sp_addr;
                     let mut sp = self.read_int(sp_addr) as usize;
 
-                    // Peek/Pop values
-                    // SP points to next free slot.
-                    // [sp-32] = Self
-                    // [sp-64] = K (Continuation Closure)
-                    // [sp-96] = Arg (Value to print)
+                    // Peek values
+                    // [sp-32] = K (Continuation Label)
+                    // [sp-64] = Val (Value to print)
 
-                    let self_ptr = self.read_int(sp - 32);
-                    let k_ptr = self.read_int(sp - 64);
-                    let val = self.read_int(sp - 96);
+                    let k_label = self.read_int(sp - 32);
+                    let val = self.read_int(sp - 64);
 
                     // Print
                     println!("{}", val);
                     self.output
                         .extend_from_slice(format!("{}\n", val).as_bytes());
 
-                    // "Pop" arguments by resetting SP base
-                    sp -= 96;
+                    // Pop arguments (Val, K) -> 2 * 32 = 64 bytes
+                    sp -= 64;
 
-                    // Call Continuation: AppCls(k, [Unit])
+                    // Call Continuation: K(Unit)
                     // Push Unit (Result 0)
                     self.write_int(sp, 0);
-                    sp += 32;
-
-                    // Push Self (K)
-                    self.write_int(sp, k_ptr);
                     sp += 32;
 
                     // Update SP
                     self.write_int(sp_addr, sp as i32);
 
-                    // Jump to K conversion code (K[0])
-                    if k_ptr == 0 {
-                        return Err("print_int continuation closure is NULL (0)".to_string());
-                    }
-                    let k_code = self.read_int(k_ptr as usize);
-                    if k_code == 0 {
-                        return Err(format!(
-                            "print_int continuation code is 0 at closure {}",
-                            k_ptr
-                        ));
-                    }
-                    self.pc = (k_code - 1) as usize;
+                    // Jump to K (Label)
+                    // k_label is now 0-based block index.
+                    // 0 is valid (main or entry).
+                    self.pc = k_label as usize;
                 } else {
                     eprintln!("Warning: Unknown external call {}", name);
                 }
@@ -243,7 +237,7 @@ impl Simulator {
         Ok(())
     }
 
-    fn read_int(&self, addr: usize) -> i32 {
+    pub fn read_int(&self, addr: usize) -> i32 {
         let mut res: i32 = 0;
         for i in 0..32 {
             if self.memory[addr + i] != 0 {
@@ -253,7 +247,7 @@ impl Simulator {
         res
     }
 
-    fn write_int(&mut self, addr: usize, val: i32) {
+    pub fn write_int(&mut self, addr: usize, val: i32) {
         for i in 0..32 {
             self.memory[addr + i] = if (val & (1 << i)) != 0 { 1 } else { 0 };
         }

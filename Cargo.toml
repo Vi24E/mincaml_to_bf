@@ -2,6 +2,7 @@
 name = "mincaml_to_bf"
 version = "0.1.0"
 edition = "2024"
+default-run = "mincaml_to_bf"
 
 [dependencies]
 nom = "7.1.3"

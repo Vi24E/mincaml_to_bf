@@ -80,18 +80,18 @@ pub fn f(prog: &Prog) -> String {
                      */
                     for i in 0..32 {
                         bf_code.push_str("[-");
-                        bf_code.push_str(&">".to_string().repeat(33 - i));
+                        bf_code.push_str(&">".to_string().repeat(32 - i));
                         bf_code.push_str(&">".to_string().repeat(33));
                         bf_code.push('[');
                         bf_code.push_str(&">".to_string().repeat(33));
                         bf_code.push(']');
-                        bf_code.push_str(&"<".to_string().repeat(33 - i));
+                        bf_code.push_str(&"<".to_string().repeat(32 - i));
                         bf_code.push('+');
-                        bf_code.push_str(&"<".to_string().repeat(i));
+                        bf_code.push_str(&"<".to_string().repeat(i + 1));
                         bf_code.push('[');
                         bf_code.push_str(&"<".to_string().repeat(33));
                         bf_code.push(']');
-                        bf_code.push_str(&"<".to_string().repeat(33 - i));
+                        bf_code.push_str(&"<".to_string().repeat(32 - i));
                         bf_code.push_str("]>");
                     }
                     bf_code.push_str(&">".to_string().repeat(33));
@@ -104,7 +104,7 @@ pub fn f(prog: &Prog) -> String {
                     bf_code.push(']');
                     bf_code.push_str(&"<".to_string().repeat(32));
                 }
-                Operation::Pop(dest) => {
+                Operation::Pop(dest) => { // bug
                     /*
                     3 bit pop
                     >>> >>>>[>>>>]<<<< <<< // move to last
@@ -122,22 +122,22 @@ pub fn f(prog: &Prog) -> String {
                     bf_code.push('[');
                     bf_code.push_str(&">".to_string().repeat(33));
                     bf_code.push(']');
-                    bf_code.push_str(&">".to_string().repeat(33));
-                    bf_code.push_str(&">".to_string().repeat(32));
+                    bf_code.push_str(&"<".to_string().repeat(33));
+                    bf_code.push_str(&"<".to_string().repeat(32));
                     for i in 0..32 {
                         bf_code.push_str("[-");
-                        bf_code.push_str(&">".to_string().repeat(33 - i));
+                        bf_code.push_str(&">".to_string().repeat(32 - i));
                         bf_code.push('[');
                         bf_code.push_str(&"<".to_string().repeat(33));
                         bf_code.push(']');
-                        bf_code.push_str(&"<".to_string().repeat(33 - i));
+                        bf_code.push_str(&"<".to_string().repeat(32 - i));
                         bf_code.push('+');
-                        bf_code.push_str(&">".to_string().repeat(33 - i));
+                        bf_code.push_str(&">".to_string().repeat(32 - i));
                         bf_code.push_str(&">".to_string().repeat(33));
                         bf_code.push('[');
                         bf_code.push_str(&">".to_string().repeat(33));
                         bf_code.push(']');
-                        bf_code.push_str(&"<".to_string().repeat(33 - i));
+                        bf_code.push_str(&"<".to_string().repeat(32 - i));
                         bf_code.push_str(&"<".to_string().repeat(33));
                         bf_code.push_str("]>");
                     }
@@ -147,7 +147,13 @@ pub fn f(prog: &Prog) -> String {
                     bf_code.push_str(&"<".to_string().repeat(33));
                     bf_code.push(']');
                     bf_code.push_str(&"<".to_string().repeat(32));
-                    copy(&mut bf_code, &mut current_ptr, stack_start, *dest, buffer_start, 32);
+                    move_val(
+                        &mut bf_code,
+                        &mut current_ptr,
+                        stack_start,
+                        *dest,
+                        32,
+                    );
                 }
                 Operation::SetImm(dest, val) => {
                     bf_code
@@ -316,13 +322,13 @@ pub fn f(prog: &Prog) -> String {
                     current_ptr += 2;
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 33);
                     bf_code.push_str("[-");
-                    move_ptr(&mut bf_code, &mut current_ptr, *l2 * 2);
+                    move_ptr(&mut bf_code, &mut current_ptr, (*l2 + 1) * 2);
                     bf_code.push('+');
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 33);
                     bf_code.push_str("]");
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 35);
                     bf_code.push_str("[-");
-                    move_ptr(&mut bf_code, &mut current_ptr, *l1 * 2);
+                    move_ptr(&mut bf_code, &mut current_ptr, (*l1 + 1) * 2);
                     bf_code.push('+');
                     move_ptr(&mut bf_code, &mut current_ptr, reg_start + 35);
                     bf_code.push_str("]");
@@ -334,7 +340,7 @@ pub fn f(prog: &Prog) -> String {
                 Operation::Jump(target) => {
                     bf_code
                         .push_str(&(format!("\n# Jump Expected: {}\n", current_ptr).to_string()));
-                    move_ptr(&mut bf_code, &mut current_ptr, *target * 2);
+                    move_ptr(&mut bf_code, &mut current_ptr, (*target + 1) * 2);
                     bf_code.push('+'); // activate block
                 }
                 Operation::JumpVar(src) => {
@@ -421,9 +427,18 @@ pub fn f(prog: &Prog) -> String {
                         move_ptr(&mut bf_code, &mut current_ptr, running_flag);
                         bf_code.push_str("[-]");
                         // clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
+                    } else if name == "min_caml_print_int" || name == "print_int" {
+                        bf_code
+                            .push_str(&(format!("\n# CallExternal Stub: {}\n", name).to_string()));
                     } else {
                         panic!("CallExternal is not implemented");
                     }
+                }
+                Operation::Halt => {
+                    bf_code
+                        .push_str(&(format!("\n# Halt Expected: {}\n", current_ptr).to_string()));
+                    move_ptr(&mut bf_code, &mut current_ptr, running_flag);
+                    bf_code.push_str("[-]");
                 }
                 Operation::InputByte(addr) => {
                     bf_code.push_str(

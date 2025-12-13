@@ -21,6 +21,7 @@ fn run_test(op: Operation, expected_res: u32, res_addr: u32, test_name: &str) {
         reg_start,
         var_start,
         stack_start,
+        sp_addr: stack_start,
     };
 
     println!("DEBUG: Running {}", test_name);
@@ -119,6 +120,7 @@ fn test_add_large_no_overflow() {
         reg_start: 10,
         var_start: 300,
         stack_start: 1000,
+        sp_addr: 1000,
     };
 
     let bf_code = emit::f(&prog);
@@ -158,6 +160,7 @@ fn test_add_overflow() {
         reg_start: 10,
         var_start: 300,
         stack_start: 1000,
+        sp_addr: 1000,
     };
 
     let bf_code = emit::f(&prog);
@@ -197,6 +200,7 @@ fn test_sub_large_no_underflow() {
         reg_start: 10,
         var_start: 300,
         stack_start: 1000,
+        sp_addr: 1000,
     };
 
     let bf_code = emit::f(&prog);
@@ -236,6 +240,7 @@ fn test_sub_underflow() {
         reg_start: 10,
         var_start: 300,
         stack_start: 1000,
+        sp_addr: 1000,
     };
 
     let bf_code = emit::f(&prog);
@@ -275,6 +280,7 @@ fn test_subz_large_result() {
         reg_start: 10,
         var_start: 300,
         stack_start: 1000,
+        sp_addr: 1000,
     };
 
     let bf_code = emit::f(&prog);
@@ -314,6 +320,7 @@ fn test_subz_zero_result_large() {
         reg_start: 10,
         var_start: 300,
         stack_start: 1000,
+        sp_addr: 1000,
     };
 
     let bf_code = emit::f(&prog);
@@ -355,6 +362,7 @@ fn test_subz_conflict_dest_reg() {
         reg_start,
         var_start: 300,
         stack_start: 1000,
+        sp_addr: 1000,
     };
 
     let bf_code = emit::f(&prog);

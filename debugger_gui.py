@@ -103,11 +103,19 @@ class DebuggerGUI:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.code_list.config(yscrollcommand=scrollbar.set)
         
-        # Batch Insert Code
-        code_items = [str(op) for op in self.dbg.ops] # Simplification
-        # Adding line numbers to listbox items
-        list_items = [f"{i:04}: {op}" for i, op in enumerate(self.dbg.ops)]
-        self.code_list.insert(tk.END, *list_items)
+        # Batch Insert Code - Optimized
+        # self.code_list.insert(tk.END, *list_items) # Too heavy
+        
+        # Insert in chunks to keep UI responsive-ish (though still blocking main thread if done synchronously)
+        # Better: just insert all but accept delay? 200k is border line.
+        # Faster approach: directly access tk widget? No.
+        # Let's just do it in one go but without * unpacking if list is huge
+        if len(list_items) > 10000:
+             chunk_size = 5000
+             for i in range(0, len(list_items), chunk_size):
+                 self.code_list.insert(tk.END, *list_items[i:i+chunk_size])
+        else:
+             self.code_list.insert(tk.END, *list_items)
         
         # Right Panel: Memory
         mem_panel_frame = ttk.Frame(self.main_container)
@@ -117,6 +125,8 @@ class DebuggerGUI:
         self.mem_notebook.pack(fill=tk.BOTH, expand=True)
         
         self.setup_memory_tabs()
+        
+        self.last_pc = 0
 
     def setup_memory_tabs(self):
         # Register Tab
@@ -128,6 +138,10 @@ class DebuggerGUI:
         if self.dbg.buffer_start is not None:
              self.buf_frame = self.create_mem_grid(self.mem_notebook, "Buffer",
                                                    self.dbg.buffer_start, 32)
+
+        # Stack Tab (New)
+        if self.dbg.stack_start is not None:
+             self.stack_frame = self.create_stack_view(self.mem_notebook, "Stack")
              
         # Local Tape Tab
         self.tape_frame = self.create_mem_grid(self.mem_notebook, "Tape (Local)", 0, 128)
@@ -142,6 +156,61 @@ class DebuggerGUI:
         Stack Start:     {self.dbg.stack_start}
         """
         ttk.Label(info_frame, text=info_text, font=self.code_font).pack(padx=20, pady=20)
+
+    def create_stack_view(self, notebook, title):
+        frame = ttk.Frame(notebook)
+        notebook.add(frame, text=title)
+        
+        # Treeview for Stack
+        columns = ("id", "addr", "used", "value")
+        tree = ttk.Treeview(frame, columns=columns, show="headings", height=20)
+        
+        tree.heading("id", text="ID")
+        tree.column("id", width=50, anchor="center")
+        
+        tree.heading("addr", text="Addr")
+        tree.column("addr", width=80, anchor="center")
+        
+        tree.heading("used", text="Used")
+        tree.column("used", width=50, anchor="center")
+        
+        tree.heading("value", text="Value")
+        tree.column("value", width=100, anchor="e") # Right align numbers
+        
+        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        
+        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Store for update
+        frame.meta = {
+            'tree': tree,
+            'type': 'stack'
+        }
+        
+        self.render_stack_view(frame)
+        return frame
+
+    def render_stack_view(self, frame):
+        tree = frame.meta['tree']
+        # Clear existing
+        for item in tree.get_children():
+            tree.delete(item)
+            
+        stack_vals = self.dbg.get_stack_values(limit=32)
+        for item in stack_vals:
+            # Highlight logic? Maybe if it matches SP?
+            # We don't track abstract SP easily here without decoding registers.
+            # But we can show what we have.
+            
+            used_str = "YES" if item['is_used'] else "-"
+            tree.insert("", tk.END, values=(
+                f"{item['id']}",
+                f"{item['addr']}",
+                used_str,
+                f"{item['value']}"
+            ))
 
     def create_mem_grid(self, notebook, title, start_addr, count):
         frame = ttk.Frame(notebook)
@@ -229,10 +298,13 @@ class DebuggerGUI:
                 lbl.grid(row=i//cols, column=1+j, padx=1, pady=1)
 
     def update_view(self):
-        # Code Highlight
-        self.code_list.selection_clear(0, tk.END)
+        # Code Highlight - Optimized
+        # self.code_list.selection_clear(0, tk.END) # O(N) - VERY SLOW
+        if hasattr(self, 'last_pc'):
+            self.code_list.selection_clear(self.last_pc)
         self.code_list.selection_set(self.dbg.pc)
         self.code_list.see(self.dbg.pc)
+        self.last_pc = self.dbg.pc
         
         # Status
         self.status_var.set(f"Step: {self.dbg.step_count} | PC: {self.dbg.pc} | Ptr: {self.dbg.ptr}")
@@ -243,6 +315,7 @@ class DebuggerGUI:
             if hasattr(self, 'reg_frame'): self.render_grid(self.reg_frame)
             if hasattr(self, 'buf_frame'): self.render_grid(self.buf_frame)
             if hasattr(self, 'tape_frame'): self.render_grid(self.tape_frame)
+            if hasattr(self, 'stack_frame'): self.render_stack_view(self.stack_frame)
 
         # Force UI update (Critical for macOS)
         self.root.update_idletasks()

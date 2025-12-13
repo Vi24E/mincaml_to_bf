@@ -69,6 +69,23 @@ def parse_bf(code):
             
             ops.append(Instruction(c, count, label=label.strip()))
         elif c == '[':
+            # Check for Loop Optimization
+            # 1. [-] or [+] -> Clear current cell
+            # Look ahead for simple loops
+            
+            # Simple peephole optimization during parsing?
+            # Actually, let's keep it simple: parse normally, but if we see `[` check content.
+            # But parsing is linear.
+            # Let's check `[-]` pattern.
+            is_clear_loop = False
+            if i + 2 < len(code) and code[i+1] == '-' and code[i+2] == ']':
+                 is_clear_loop = True
+            
+            if is_clear_loop:
+                 ops.append(Instruction('Z')) # Z for Zero
+                 i += 3 # Skip [, - and ]
+                 continue
+
             ops.append(Instruction(c))
             loop_stack.append(len(ops) - 1)
         elif c == ']':
@@ -135,6 +152,9 @@ class Debugger:
             self.pc += 1
         elif op.char == '-':
             self.tape[self.ptr] = (self.tape[self.ptr] - op.count) % 256
+            self.pc += 1
+        elif op.char == 'Z': # Zero Optimization
+            self.tape[self.ptr] = 0
             self.pc += 1
         elif op.char == '>':
             self.tape_len = len(self.tape) # optimize access
@@ -298,22 +318,23 @@ class Debugger:
     def get_stack_values(self, limit=32):
         """
         Parses 32-bit integer values from the stack.
-        Range: [self.stack_start, self.stack_start + limit * 32)
-        Format: 32 cells per value, little-endian.
+        Range: [self.stack_start, self.stack_start + limit * 33)
+        Format: 33 cells per item (32 bits value + 1 bit used flag), little-endian.
         """
         if self.stack_start is None:
             return []
 
         stack_vals = []
-        # Limit number of items to scan to avoid huge payload
+        # Limit number of items to scan
         count = 0
         current_addr = self.stack_start
         
         while count < limit:
-            # Check bounds
-            if current_addr + 32 > len(self.tape):
+            # Check bounds (need 33 cells)
+            if current_addr + 33 > len(self.tape):
                 break
                 
+            # Value is first 32 bits
             bits = self.tape[current_addr : current_addr + 32]
             value = 0
             for i, bit in enumerate(bits):
@@ -324,13 +345,18 @@ class Debugger:
             if value >= 2**31:
                 value -= 2**32
 
+            # Used flag is the 33rd bit (offset 32)
+            used_flag = self.tape[current_addr + 32]
+
             stack_vals.append({
                 'id': count,
                 'addr': current_addr,
-                'value': value
+                'value': value,
+                'is_used': used_flag != 0
             })
             
-            current_addr += 32
+            # Stride is 33
+            current_addr += 33
             count += 1
             
         return stack_vals
