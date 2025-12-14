@@ -644,6 +644,7 @@ fn copy(
         )
         .to_string()),
     );
+    clear_range(bf_code, current_ptr, dest, size);
     move_ptr(bf_code, current_ptr, source);
     for i in 0..size {
         bf_code.push('[');
@@ -736,6 +737,7 @@ fn move_val(bf_code: &mut String, current_ptr: &mut u32, source: u32, dest: u32,
         )
         .to_string()),
     ); // Optional, but let's be consistent
+    clear_range(bf_code, current_ptr, dest, size);
     for i in 0..size {
         // move_ptr(bf_code, current_ptr, dest + i);
         // bf_code.push_str("[-]"); // Clear dest

@@ -140,22 +140,8 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
     let entry_idx = *block_map.get(&prog.entry).unwrap(); // Should be 1
     eprintln!("DEBUG: Block Map: {:?}", block_map);
 
-    for (i, block) in sorted_blocks {
+    for (_i, block) in sorted_blocks {
         let mut ops = Vec::new();
-
-        // Initialize Heap Pointer at Entry Block
-        if *i == prog.entry {
-            let hp_addr = (reg_start + 4) as u32;
-            // Heap start far after stack. Verify stack doesn't grow into it quickly.
-            // stack size is var_count * 32? No stack_start is var_start + ...
-            // Stack grows UP.
-            // Heap should be far away. stack_start + 100000 creates 3MB gap approximately.
-            let heap_start = (stack_start + 100000) as i32;
-            ops.push(Operation::SetImm(hp_addr, heap_start));
-
-            // Initialize SP
-            ops.push(Operation::SetImm(sp_addr as u32, stack_start as i32));
-        }
 
         // The last variable slot is reserved for comparison temp
         let cmp_temp_addr = var_start + (var_count - 1) * 32;

@@ -6,4 +6,4 @@ let rec fib_alt n =
     let x = fib_alt (n - 1) + fib_alt (n - 2) + k in
     x + x
 in 
-print_int (fib_alt 10)
+let x = fib_alt 5 in ()

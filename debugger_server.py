@@ -215,7 +215,7 @@ class DebuggerHandler(http.server.SimpleHTTPRequestHandler):
             filename = sys.argv[1]
             with open(filename, 'r') as f:
                 code = f.read()
-            DBG_INSTANCE = Debugger(code)
+            DBG_INSTANCE = Debugger(code, tape_size=1048576)
             
             self.send_response(200)
             self.end_headers()
@@ -226,7 +226,7 @@ def run_server(filename):
     global DBG_INSTANCE
     with open(filename, 'r') as f:
         code = f.read()
-    DBG_INSTANCE = Debugger(code)
+    DBG_INSTANCE = Debugger(code, tape_size=1048576)
     
     print(f"Starting Web Debugger for {filename}")
     print(f"Open http://localhost:{PORT} in your browser")
