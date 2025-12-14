@@ -138,9 +138,21 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
     sorted_blocks.sort_by_key(|(id, _)| *block_map.get(*id).unwrap());
 
     let entry_idx = *block_map.get(&prog.entry).unwrap(); // Should be 1
+    eprintln!("DEBUG: Block Map: {:?}", block_map);
 
     for (i, block) in sorted_blocks {
         let mut ops = Vec::new();
+
+        // Initialize Heap Pointer at Entry Block
+        if *i == prog.entry {
+            let hp_addr = (reg_start + 4) as u32;
+            // Heap start far after stack. Verify stack doesn't grow into it quickly.
+            // stack size is var_count * 32? No stack_start is var_start + ...
+            // Stack grows UP.
+            // Heap should be far away. stack_start + 100000 creates 3MB gap approximately.
+            let heap_start = (stack_start + 100000) as i32;
+            ops.push(Operation::SetImm(hp_addr, heap_start));
+        }
 
         // The last variable slot is reserved for comparison temp
         let cmp_temp_addr = var_start + (var_count - 1) * 32;
@@ -382,16 +394,19 @@ fn convert_atom(
                 panic!("LoadLabel: Label not found: {}", l);
             }
         }
-        Atom::Tuple(_) => {
-            // Optimization for closed functions/constants. Dynamic allocation via MakeCls is handled via Push logic in blocked.rs now (Tuple -> Heap allocation not implemented here)
-            // But wait, `MakeCls` conversion in `blocked.rs` emits `Let x = Tuple(..)`.
-            // Wait, I changed `blocked.rs` to use `Push` for `MakeCls`!
-            // `Let entry = LoadLabel`. `Let x = GetSp(x)`. `Push`.
-            // So `blocked.rs` NO LONGER emits `Atom::Tuple` for Closures!
-            // `Atom::Tuple` remains for regular Tuples?
-            // If so, `Tuple` conversion here should allocate?
-            // Currently it Sets 0.
-            ops.push(Operation::SetImm(dest_addr, 0));
+        Atom::Tuple(xs) => {
+            // Stack Allocation (Closures on Stack)
+            let sp_addr = (reg_start + 0) as u32; // SP register address
+
+            // dest = sp (Capture Start Address of Tuple)
+            ops.push(Operation::MoveData(dest_addr, sp_addr, 32));
+
+            for x in xs {
+                let src_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
+                eprintln!("DEBUG: Tuple Push var={} addr={}", x, src_addr);
+                // Push(x)
+                ops.push(Operation::Push(src_addr));
+            }
         }
         Atom::Get(x, y) => {
             // Logic for Get (Array/Tuple access)
@@ -434,9 +449,16 @@ fn convert_atom(
                 let tmp_addr = (reg_start + 64) as u32;
                 ops.push(Operation::MoveData(tmp_addr, addr_y, 32));
                 for _ in 0..5 {
-                    ops.push(Operation::Add(tmp_addr, tmp_addr, tmp_addr));
+                    ops.push(Operation::Add(tmp_addr, tmp_addr, tmp_addr)); // tmp = y * 32
                 }
-                ops.push(Operation::Add(tmp_addr, addr_x, tmp_addr));
+                // Fix: Load Tuple Pointer from addr_x first!
+                // dest = *addr_x (Tuple Pointer)
+                ops.push(Operation::MoveData(dest_addr, addr_x, 32));
+
+                // tmp = dest + tmp (Tuple Ptr + Offset)
+                ops.push(Operation::Add(tmp_addr, dest_addr, tmp_addr));
+
+                // dest = *tmp (Load Element)
                 ops.push(Operation::Load(dest_addr, tmp_addr));
             }
         }

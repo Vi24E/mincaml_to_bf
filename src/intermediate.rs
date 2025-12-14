@@ -389,6 +389,7 @@ fn compute_layout(
             for (arg, _) in &fundef.args {
                 if !map.contains_key(arg) {
                     map.insert(arg.clone(), *count);
+                    eprintln!("DEBUG: Mapping Arg {} to {}", arg, *count);
                     *count += 1;
                 }
             }
