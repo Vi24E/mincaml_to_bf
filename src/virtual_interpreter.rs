@@ -1,6 +1,4 @@
 use crate::r#virtual::{Operation, Prog};
-use std::convert::TryInto;
-use std::io::{self, Write};
 
 pub struct Simulator {
     pub memory: Vec<i32>, // Using i32 to store cell values (0/1 usually, but allows debug)
@@ -223,22 +221,12 @@ impl Simulator {
                     eprintln!("Warning: Unknown external call {}", name);
                 }
             }
-            Operation::InputByte(addr) => {
+            Operation::InputByte(_addr) => {
                 // Not supported for now
             }
             Operation::OutputByte(addr) => {
                 let val = self.memory[*addr as usize];
                 print!("{}", val as u8 as char);
-            }
-            Operation::Load(dest, src) => {
-                let addr = self.read_int(*src as usize);
-                let val = self.read_int(addr as usize);
-                self.write_int(*dest as usize, val);
-            }
-            Operation::Store(dest, src) => {
-                let addr = self.read_int(*dest as usize);
-                let val = self.read_int(*src as usize);
-                self.write_int(addr as usize, val);
             }
             Operation::Push(src) => {
                 let sp_addr = prog.sp_addr;

@@ -1,4 +1,4 @@
-use crate::closure::{self, Closure};
+use crate::closure::{self, Prog as ClosureProg};
 use crate::id;
 use crate::ty::Type;
 use std::fmt;
@@ -271,7 +271,7 @@ pub fn g(e: closure::Term, k: Box<dyn FnOnce(id::T) -> Term>) -> Term {
     }
 }
 
-pub fn f(prog: &closure::Prog) -> Prog {
+pub fn f(prog: &ClosureProg) -> Prog {
     let mut cps_fundefs = Vec::new();
 
     for fundef in &prog.fundefs {
@@ -332,7 +332,6 @@ impl fmt::Display for Atom {
             Atom::Get(x, y) => write!(f, "{}.({})", x, y),
             Atom::Put(x, y, z) => write!(f, "{}.({}) <- {}", x, y, z),
             Atom::ExtArray(x) => write!(f, "ExtArray({})", x),
-            Atom::Tuple(xs) => write!(f, "({:?})", xs),
             Atom::Tuple(xs) => write!(f, "({:?})", xs),
             Atom::PApp(l, xs) => write!(f, "PApp({}, {:?})", l, xs),
         }

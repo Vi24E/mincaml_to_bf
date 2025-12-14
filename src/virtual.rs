@@ -26,8 +26,6 @@ pub enum Operation {
     CallExternal(String),      // Call external function (e.g. print_int)
     InputByte(u32),            // Read byte to address
     OutputByte(u32),           // Write byte from address
-    Load(u32, u32),            // dest = *src (Indirect Read)
-    Store(u32, u32),           // *dest = src (Indirect Write)
     Push(u32),                 // [sp] = *src; sp += 32
     Pop(u32),                  // sp -= 32; *dest = [sp]
     Halt,                      // Stop execution
@@ -137,7 +135,8 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
     // We need to sort by the index assigned in layout.
     sorted_blocks.sort_by_key(|(id, _)| *block_map.get(*id).unwrap());
 
-    let entry_idx = *block_map.get(&prog.entry).unwrap(); // Should be 1
+    let _entry_idx = 0;
+    // *block_map.get(&prog.entry).unwrap(); // Should be 1
     eprintln!("DEBUG: Block Map: {:?}", block_map);
 
     for (_i, block) in sorted_blocks {
@@ -293,11 +292,12 @@ fn convert_term(
             };
 
             for (i, (x, _)) in xts.iter().enumerate() {
-                let dest_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
+                let _dest_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
                 let tmp_addr = (reg_start + 64) as u32;
                 ops.push(Operation::SetImm(tmp_addr, (i * 32) as i32));
                 ops.push(Operation::Add(tmp_addr, tuple_ptr_addr, tmp_addr));
-                ops.push(Operation::Load(dest_addr, tmp_addr));
+                // ops.push(Operation::Load(dest_addr, tmp_addr));
+                panic!("LetTuple Load not supported");
             }
 
             convert_term(
@@ -448,22 +448,24 @@ fn convert_atom(
                 ops.push(Operation::Add(tmp_addr, dest_addr, tmp_addr));
 
                 // dest = *tmp (Load Element)
-                ops.push(Operation::Load(dest_addr, tmp_addr));
+                // ops.push(Operation::Load(dest_addr, tmp_addr));
+                panic!("Get Load not supported");
             }
         }
         Atom::Put(x, y, z) => {
             let addr_x = (var_start + var_map.get(x).unwrap() * 32) as u32;
             let addr_y = (var_start + var_map.get(y).unwrap() * 32) as u32;
-            let addr_z = (var_start + var_map.get(z).unwrap() * 32) as u32;
+            let _addr_z = (var_start + var_map.get(z).unwrap() * 32) as u32;
             let tmp_addr = (reg_start + 64) as u32;
             ops.push(Operation::MoveData(tmp_addr, addr_y, 32));
             for _ in 0..5 {
                 ops.push(Operation::Add(tmp_addr, tmp_addr, tmp_addr));
             }
             ops.push(Operation::Add(tmp_addr, addr_x, tmp_addr));
-            ops.push(Operation::Store(tmp_addr, addr_z));
+            // ops.push(Operation::Store(tmp_addr, addr_z));
+            panic!("Put Store not supported");
         }
-        Atom::ExtArray(l) => {
+        Atom::ExtArray(_l) => {
             // ExtArray typically returns address of the array.
             // We don't really support global arrays in this simple backend yet.
             // But we can return a dummy address or handling it.
@@ -513,8 +515,6 @@ impl fmt::Display for Operation {
             Operation::CallExternal(name) => write!(f, "CallExternal({})", name),
             Operation::InputByte(addr) => write!(f, "InputByte({})", addr),
             Operation::OutputByte(addr) => write!(f, "OutputByte({})", addr),
-            Operation::Load(dest, src) => write!(f, "Load({}, {})", dest, src),
-            Operation::Store(dest, src) => write!(f, "Store({}, {})", dest, src),
             Operation::Push(src) => write!(f, "Push({})", src),
             Operation::Pop(dest) => write!(f, "Pop({})", dest),
             Operation::Halt => write!(f, "Halt"),

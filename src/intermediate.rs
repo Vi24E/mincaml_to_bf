@@ -1,5 +1,5 @@
 use crate::blocked::{Prog as BlockedProg, Term as BlockedTerm};
-use crate::closure::{self, Prog as ClosureProg};
+use crate::closure::Prog as ClosureProg;
 use crate::id;
 use crate::ty::Type;
 use std::collections::HashMap;
@@ -59,15 +59,13 @@ pub enum Term {
 struct Converter {
     blocks: Vec<Block>,
     // closure_map removed
-    func_arg_counts: HashMap<String, usize>, // Func Name -> Arg Count
     current_func_args_len: usize,
 }
 
 impl Converter {
-    fn new(func_arg_counts: HashMap<String, usize>) -> Self {
+    fn new(_func_arg_counts: HashMap<String, usize>) -> Self {
         Converter {
             blocks: Vec::new(),
-            func_arg_counts,
             current_func_args_len: 0,
         }
     }
@@ -115,22 +113,21 @@ impl Converter {
             BlockedTerm::ExtArray(x) => self.bind_atom(Atom::ExtArray(x.clone()), dest, next),
             BlockedTerm::LoadLabel(l) => self.bind_atom(Atom::LoadLabel(l.clone()), dest, next),
             BlockedTerm::Push(x) => self.bind_atom(Atom::Push(x.clone()), dest, next),
-            BlockedTerm::Pop(x) => {
+            BlockedTerm::Pop(_x) => {
                 // BlockedTerm::Pop(x) -> Let x = Pop
                 if let Some((dest_x, _)) = &dest {
-                    if dest_x != x {
-                        // This shouldn't happen if Blocked Term Pop(x) means "Pop to x"
-                        // and we are visiting the term that defines x?
-                        // Waitt, blocked::Term is `Let(x, Pop(..), ..)`?
-                        // In `blocked.rs`, I used `Let((arg, ty), Box::new(Term::Pop(arg)), ...)`
-                        // So BlockedTerm::Pop(id::T) is effectively "Pop to id::T".
-                        // BUT `convert_term` structure handles `BlockedTerm::Let` recursively.
-                        // When it visits `e1` (which is Pop(arg)), `dest` is None usually?
-                        // No, `Let` case calls `convert_term(e2)`.
-                        // Then checks `e1`.
-                        // `as_atom` is used for `e1`.
-                        // So I need to update `as_atom` too!
-                    }
+                    // This shouldn't happen if Blocked Term Pop(x) means "Pop to x"
+                    // and we are visiting the term that defines x?
+                    // Waitt, blocked::Term is `Let(x, Pop(..), ..)`?
+                    // In `blocked.rs`, I used `Let((arg, ty), Box::new(Term::Pop(arg)), ...)`
+                    // So BlockedTerm::Pop(id::T) is effectively "Pop to id::T".
+                    // BUT `convert_term` structure handles `BlockedTerm::Let` recursively.
+                    // When it visits `e1` (which is Pop(arg)), `dest` is None usually?
+                    // No, `Let` case calls `convert_term(e2)`.
+                    // Then checks `e1`.
+                    // `as_atom` is used for `e1`.
+                    // So I need to update `as_atom` too!
+                    let _ = dest_x; // Mark as used to suppress warning
                 }
                 // convert_term handles terms that are NOT atoms (like If, Let).
                 // Pop(x) is an atomic action in blocked?
@@ -140,7 +137,6 @@ impl Converter {
                 // `as_atom` must handle it.
                 // Atom should be `Atom::Pop` (no arg) because `Let` handles the binding.
                 // So `BlockedTerm::Pop(x)` -> `Atom::Pop`. `x` is implicit in `Let`.
-                // But `BlockedTerm::Pop(x)` carries `x`. We just ignore it and trust `Let` binds it to `x`?
                 // Or we check consistency?
                 // Actually `BlockedTerm::Pop(x)` seems redundant if wrapped in `Let(x, Pop(x))`.
                 // But `blocked.rs` used `Term::Pop(arg)`.
@@ -148,7 +144,7 @@ impl Converter {
 
                 self.bind_atom(Atom::Pop, dest, next)
             }
-            BlockedTerm::GetSp(x) => self.bind_atom(Atom::GetSp, dest, next),
+            BlockedTerm::GetSp(_x) => self.bind_atom(Atom::GetSp, dest, next),
 
             // CallCls and CallBlock are removed from blocked::Term
             // TailCallCls and TailCallBlock are the only calls
@@ -361,7 +357,6 @@ fn compute_layout(
     let mut block_map = HashMap::new();
     let mut var_map = HashMap::new();
     let mut block_count = 0;
-    let mut var_count = 0; // Max var count across all functions (for global stats, if needed)
     let mut frame_sizes = HashMap::new();
 
     // Ensure entry block is index 0
@@ -384,7 +379,7 @@ fn compute_layout(
     let mut current_var_count = 0;
 
     // Helper to map args
-    let mut map_args = |func_name: &str, map: &mut HashMap<id::T, usize>, count: &mut usize| {
+    let map_args = |func_name: &str, map: &mut HashMap<id::T, usize>, count: &mut usize| {
         if let Some(fundef) = closure_prog.fundefs.iter().find(|f| f.name.0 == func_name) {
             for (arg, _) in &fundef.args {
                 if !map.contains_key(arg) {
@@ -415,7 +410,7 @@ fn compute_layout(
     }
     // Save last frame size
     frame_sizes.insert(current_func_name, current_var_count);
-    var_count = current_var_count + 1; // Total count + 1 (reserved for global comparison temp)
+    let var_count = current_var_count + 1; // Total count + 1 (reserved for global comparison temp)
 
     Layout {
         block_map,

@@ -103,13 +103,6 @@ fn test_sub() {
 
 #[test]
 fn test_if_true() {
-    let code = "let x = if 10 > 5 then 1 else 0 in x";
-    // 10 > 5 is effectively 10 - 5 > 0?
-    // MinCaml If implementation: IfEq, IfLE.
-    // parser might treat > as not LE?
-    // Let's use standard MinCaml constructs. `if x <= y`.
-    // "not (10 <= 5)" -> "if 10 <= 5 then 0 else 1"
-
     let code = "let x = if 10 <= 5 then 0 else 1 in x";
     run_test_case(code, "x", 1);
 }

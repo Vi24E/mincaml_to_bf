@@ -70,10 +70,10 @@ pub fn g(env: &HashMap<String, Type>, e: &syntax::Syntax) -> (KNormal, Type) {
         syntax::Syntax::Bool(b) => (KNormal::Int(if *b { 1 } else { 0 }), Type::Int),
         syntax::Syntax::Int(i) => (KNormal::Int(*i), Type::Int),
         syntax::Syntax::Float(d) => (KNormal::Float(*d), Type::Float),
-        syntax::Syntax::Not(e) => g(
+        syntax::Syntax::Not(_e) => g(
             env,
             &syntax::Syntax::If(
-                e.clone(),
+                _e.clone(),
                 Box::new(syntax::Syntax::Bool(false)),
                 Box::new(syntax::Syntax::Bool(true)),
             ),
@@ -98,7 +98,7 @@ pub fn g(env: &HashMap<String, Type>, e: &syntax::Syntax) -> (KNormal, Type) {
         syntax::Syntax::FDiv(e1, e2) => insert_let(g(env, e1), |x| {
             insert_let(g(env, e2), |y| (KNormal::FDiv(x, y), Type::Float))
         }),
-        syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+        syntax::Syntax::Eq(_e1, _e2) | syntax::Syntax::LE(_e1, _e2) => g(
             env,
             &syntax::Syntax::If(
                 Box::new(e.clone()),
@@ -163,10 +163,7 @@ pub fn g(env: &HashMap<String, Type>, e: &syntax::Syntax) -> (KNormal, Type) {
             } else {
                 // External variable (assume array for now as per min-caml)
                 // Or check extenv if we had it.
-                // For now, assume it's an external array if not found.
-                // But wait, in min-caml `Var(x)` when not in env checks `Typing.extenv`.
-                // We don't have global `Typing.extenv`.
-                // Let's assume it's an external array of Int for simplicity or panic?
+                // For now, assume it's an external array of Int for simplicity or panic?
                 // Or better, assume it's a function if we encounter App later.
                 // Here, if it's just Var(x), it's likely an array or value.
                 // Let's assume array of int.
@@ -206,7 +203,7 @@ pub fn g(env: &HashMap<String, Type>, e: &syntax::Syntax) -> (KNormal, Type) {
                     // We'll assume Int return type for unknown external functions for now, or Unit.
                     // Let's assume Int.
                     let t_ret = Type::Int;
-                    let args: Vec<id::T> = Vec::new();
+                    let _args: Vec<id::T> = Vec::new(); // Dummy
 
                     // Helper to bind arguments
                     // We need to recursively bind arguments.

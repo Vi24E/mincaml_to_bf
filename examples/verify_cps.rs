@@ -1,5 +1,4 @@
 use mincaml_to_bf::{closure, cps, k_normal, parser, typing};
-use std::io::Read;
 
 fn main() {
     let code = "let x = 10 in let rec f y = x + y in f 20";

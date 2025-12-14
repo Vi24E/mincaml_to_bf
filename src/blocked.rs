@@ -57,45 +57,6 @@ pub enum Term {
     Goto(id::L),
 }
 
-impl Term {
-    fn get_type(&self) -> Type {
-        match self {
-            Term::Unit => Type::Unit,
-            Term::Int(_) | Term::Add(_, _) | Term::Sub(_, _) => Type::Int,
-            Term::Float(_)
-            | Term::Neg(_)
-            | Term::FNeg(_)
-            | Term::FAdd(_, _)
-            | Term::FSub(_, _)
-            | Term::FMul(_, _)
-            | Term::FDiv(_, _) => Type::Float,
-            Term::IfEq(_, _, e1, _) | Term::IfLE(_, _, e1, _) => e1.get_type(),
-            Term::Let(_, _, e2) => e2.get_type(),
-            Term::Var(_) => Type::Int,
-            Term::TailCallCls(_) | Term::TailCallBlock(_) | Term::TailCallDynamic(_) => Type::Unit,
-            Term::LoadLabel(_) => Type::Int,
-            Term::SetArgs(_) => Type::Unit,
-            Term::GetArg(_) | Term::GetEnv(_) => Type::Int,
-            Term::Push(_) => Type::Unit,
-            Term::Pop(_) => Type::Unit, // Pop returns Unit? No, it binds to a variable. But here `get_type` is for the term itself?
-            // Actually `Let((x, t), Pop(..), ..)` uses `Pop` as the atom.
-            // So `Pop` should return the type of value popped. Assume Int for now.
-            // But `blocked::Term` includes things used in `Let` (Atom-like) and things that are expressions.
-            // `Pop(id::T)` is an *instruction* `Pop to x`.
-            // Wait, `Operation::Pop(dest)` in `virtual`.
-            // Here `Term::Pop(id::T)` -> `Pop(x)`.
-            // It modifies `x`. So it returns Unit.
-            Term::GetSp(_) => Type::Int,
-            Term::Tuple(_) => Type::Tuple(vec![]),
-            Term::LetTuple(_, _, e) => e.get_type(),
-            Term::Get(_, _) => Type::Int,
-            Term::Put(_, _, _) => Type::Unit,
-            Term::ExtArray(_) => Type::Array(Box::new(Type::Int)),
-            Term::Goto(_) => Type::Unit,
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Prog {
     pub blocks: Vec<Block>,
@@ -104,33 +65,16 @@ pub struct Prog {
 
 struct Converter {
     blocks: Vec<(String, Term)>,
-    current_block: Vec<Term>,
-    constants: HashMap<id::T, i32>,
-    current_self: Option<(id::T, id::L, Vec<id::T>)>,
-    func_arg_counts: HashMap<String, usize>,
+    #[allow(dead_code)]
     papp_counts: HashMap<String, HashSet<usize>>,
 }
 
 impl Converter {
-    fn new(
-        func_arg_counts: HashMap<id::L, usize>,
-        papp_counts: HashMap<String, HashSet<usize>>,
-    ) -> Self {
+    fn new(papp_counts: HashMap<String, HashSet<usize>>) -> Self {
         Converter {
             blocks: Vec::new(),
-            current_block: Vec::new(),
-            constants: HashMap::new(),
-            current_self: None,
-            func_arg_counts: func_arg_counts
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v))
-                .collect(),
             papp_counts,
         }
-    }
-
-    fn gen_label(&mut self) -> String {
-        id::genid("block")
     }
 
     fn add_block(&mut self, label: String, term: Term) {
@@ -372,7 +316,7 @@ pub fn f(prog: &CpsProg) -> Prog {
     }
     scan_arg_counts(&prog.body, &mut func_arg_counts);
 
-    let mut converter = Converter::new(func_arg_counts, papp_counts);
+    let mut converter = Converter::new(papp_counts);
 
     let entry_label = "main".to_string();
     let main_term = converter.convert_term(&prog.body);
