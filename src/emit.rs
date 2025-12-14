@@ -10,6 +10,12 @@ pub fn f(prog: &Prog) -> String {
     let stack_start = prog.stack_start as u32;
     // buffer should always zero filled after operation
     let buffer_start = (prog.var_start - buf_size) as u32;
+    let hp_ptr = 10000;
+    let hp_reg_start = hp_ptr + 32;
+    let heap_start = hp_reg_start + 128;
+    // heap: [hp_ptr][hp_regs...(128)][heap]
+    // heap(with 33 bit) will grow upper
+
 
     // Metadata for Debugger (Ignored by BF as comments)
     // Format: DEBUG_METADATA{{REG_START:{} BUFFER_START:{} VAR_START:{} STACK_START:{}}}
@@ -495,8 +501,71 @@ pub fn f(prog: &Prog) -> String {
                     move_ptr(&mut bf_code, &mut current_ptr, *addr);
                     bf_code.push('.');
                 }
-                Operation::Load(_, _) => {
+                Operation::Load(idx, src) => {
                     panic!("Load operations should be optimized away!");
+                    
+                    // copy(
+                    //     &mut bf_code,
+                    //     &mut current_ptr,
+                    //     *src,
+                    //     hp_reg_start,
+                    //     buffer_start,
+                    //     32,
+                    // ); // reg[1] = *src
+                    // copy(
+                    //     &mut bf_code,
+                    //     &mut current_ptr,
+                    //     *idx,
+                    //     hp_reg_start + 32,
+                    //     buffer_start,
+                    //     32,
+                    // ); // reg[0] = reg[1]
+                    // copy(
+                    //     &mut bf_code,
+                    //     &mut current_ptr,
+                    //     hp_reg_start + 32,
+                    //     hp_reg_start + 64,
+                    //     hp_reg_start + 96,
+                    //     32,
+                    // );
+                    // move_ptr(&mut bf_code, &mut current_ptr, hp_reg_start + 64);
+                    // for _ in 0..31 {
+                    //     bf_code.push_str("[->+<]>");
+                    // }
+                    // bf_code.push_str("[[-]>+<]>"); // reg[0]' = (reg[0] != 0)
+                    // current_ptr += 32;
+                    // bf_code.push_str("[-"); // while reg[0]':
+                    // move_ptr(&mut bf_code, &mut current_ptr, heap_start);
+                    // bf_code.push_str(&">".to_string().repeat(32));
+                    // bf_code.push_str(">[>>]+[<<]>");
+                    // move_ptr(&mut bf_code, &mut current_ptr, reg_start + 35);
+                    // add(
+                    //     &mut bf_code,
+                    //     &mut current_ptr,
+                    //     reg_start + 70,
+                    //     buffer_start,
+                    //     reg_start,
+                    //     0xFFFFFFFF,
+                    // ); // reg[0] = reg[1] - 1
+                    // clear_range(&mut bf_code, &mut current_ptr, reg_start + 35, 32); // clear reg[1]
+                    // copy(
+                    //     &mut bf_code,
+                    //     &mut current_ptr,
+                    //     reg_start,
+                    //     reg_start + 35,
+                    //     buffer_start,
+                    //     32,
+                    // ); // reg[1] = reg[0]
+                    // move_ptr(&mut bf_code, &mut current_ptr, reg_start);
+                    // for _ in 0..31 {
+                    //     bf_code.push_str("[->+<]>");
+                    // }
+                    // bf_code.push_str("[[-]>+<]>"); // reg[0]' = (reg[0] != 0)
+                    // current_ptr += 32;
+                    // bf_code.push_str("]");
+                    // move_ptr(&mut bf_code, &mut current_ptr, 2);
+                    // bf_code.push_str(">[>>]<<<+>[-<<]"); // reset sub
+                    // current_ptr = 1;
                 }
                 Operation::Store(_, _) => {
                     panic!("Store operations should be optimized away!");
