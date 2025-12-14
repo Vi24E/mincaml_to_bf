@@ -121,18 +121,21 @@ impl Simulator {
                 let v1 = self.read_int(*src1 as usize);
                 let v2 = self.read_int(*src2 as usize);
                 let res = v1.wrapping_add(v2);
+                eprintln!("DEBUG: Add {} + {} = {} -> Mem[{}]", v1, v2, res, dest);
                 self.write_int(*dest as usize, res);
             }
             Operation::Sub(dest, src1, src2) => {
                 let v1 = self.read_int(*src1 as usize);
                 let v2 = self.read_int(*src2 as usize);
                 let res = v1.wrapping_sub(v2);
+                eprintln!("DEBUG: Sub {} - {} = {} -> Mem[{}]", v1, v2, res, dest);
                 self.write_int(*dest as usize, res);
             }
             Operation::SubZ(dest, src1, src2) => {
                 let v1 = self.read_int(*src1 as usize);
                 let v2 = self.read_int(*src2 as usize);
                 let res = if v1 <= v2 { 0 } else { v1 - v2 };
+                eprintln!("DEBUG: SubZ {} - {} = {} -> Mem[{}]", v1, v2, res, dest);
                 self.write_int(*dest as usize, res);
             }
             Operation::JumpIfZero(addr, l1, l2) => {
@@ -177,18 +180,26 @@ impl Simulator {
                     self.running = false;
                     eprintln!("DEBUG: Halt called"); // Optional debug
                 } else if name == "print_int" || name == "min_caml_print_int" {
-                    // Stack-Only Convention: [Val, K] (Top is K)
-                    // No Self.
+                    // Stack Convention for AppDir(print_int, [val, k]): [Val, K] (Top is K)
+                    // Pushed: Val (sp-64), K (sp-32)
 
                     let sp_addr = prog.sp_addr;
                     let mut sp = self.read_int(sp_addr) as usize;
 
                     // Peek values
-                    // [sp-32] = K (Continuation Label)
-                    // [sp-64] = Val (Value to print)
-
-                    let k_label = self.read_int(sp - 32);
+                    // K is at top (sp-32)
+                    let k_tuple_ptr = self.read_int(sp - 32);
+                    // Val is at sp-64
                     let val = self.read_int(sp - 64);
+
+                    // Dereference K Tuple to get Entry Label
+                    // K is a tuple [Entry, ...]. So mem[k_tuple_ptr] is Entry (Block Index).
+                    let k_label = self.read_int(k_tuple_ptr as usize);
+
+                    eprintln!(
+                        "DEBUG: CallExternal print_int: Val={} K_Ptr={} K_Label={}",
+                        val, k_tuple_ptr, k_label
+                    );
 
                     // Print
                     println!("RESULT: {}", val);
@@ -200,15 +211,13 @@ impl Simulator {
 
                     // Call Continuation: K(Unit)
                     // Push Unit (Result 0)
-                    self.write_int(sp, 0);
-                    sp += 32;
+                    self.write_int(sp, 0); // Write at current SP
+                    sp += 32; // Increment SP
 
-                    // Update SP
+                    // Update SP register
                     self.write_int(sp_addr, sp as i32);
 
                     // Jump to K (Label)
-                    // k_label is now 0-based block index.
-                    // 0 is valid (main or entry).
                     self.pc = k_label as usize;
                 } else {
                     eprintln!("Warning: Unknown external call {}", name);

@@ -1,0 +1,2496 @@
+warning: unused import: `Closure`
+ --> src/cps.rs:1:28
+  |
+1 | use crate::closure::{self, Closure};
+  |                            ^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `self`
+ --> src/intermediate.rs:2:22
+  |
+2 | use crate::closure::{self, Prog as ClosureProg};
+  |                      ^^^^
+
+warning: unused import: `std::convert::TryInto`
+ --> src/virtual_interpreter.rs:2:5
+  |
+2 | use std::convert::TryInto;
+  |     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Write` and `self`
+ --> src/virtual_interpreter.rs:3:15
+  |
+3 | use std::io::{self, Write};
+  |               ^^^^  ^^^^^
+
+warning: unreachable pattern
+   --> src/cps.rs:336:13
+    |
+335 |             Atom::Tuple(xs) => write!(f, "({:?})", xs),
+    |             --------------- matches all the relevant values
+336 |             Atom::Tuple(xs) => write!(f, "({:?})", xs),
+    |             ^^^^^^^^^^^^^^^ no value can reach this
+    |
+    = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `heap_start`
+  --> src/emit.rs:15:9
+   |
+15 |     let heap_start = hp_reg_start + 128;
+   |         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_heap_start`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `idx`
+   --> src/emit.rs:503:33
+    |
+503 |                 Operation::Load(idx, src) => {
+    |                                 ^^^ help: if this is intentional, prefix it with an underscore: `_idx`
+
+warning: unused variable: `src`
+   --> src/emit.rs:503:38
+    |
+503 |                 Operation::Load(idx, src) => {
+    |                                      ^^^ help: if this is intentional, prefix it with an underscore: `_src`
+
+warning: unused variable: `x`
+   --> src/intermediate.rs:151:32
+    |
+151 |             BlockedTerm::GetSp(x) => self.bind_atom(Atom::GetSp, dest, next),
+    |                                ^ help: if this is intentional, prefix it with an underscore: `_x`
+
+warning: value assigned to `var_count` is never read
+   --> src/intermediate.rs:364:13
+    |
+364 |     let mut var_count = 0; // Max var count across all functions (for global stats, if needed)
+    |             ^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> src/intermediate.rs:387:9
+    |
+387 |     let mut map_args = |func_name: &str, map: &mut HashMap<id::T, usize>, count: &mut usize| {
+    |         ----^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `e1`
+   --> src/k_normal.rs:101:28
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                            ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(_e1, e2) | syntax::Syntax::LE(_e1, e2) => g(
+    |                            +                             +
+
+warning: unused variable: `e2`
+   --> src/k_normal.rs:101:32
+    |
+101 |         syntax::Syntax::Eq(e1, e2) | syntax::Syntax::LE(e1, e2) => g(
+    |                                ^^                           ^^
+    |
+help: if this is intentional, prefix it with an underscore
+    |
+101 |         syntax::Syntax::Eq(e1, _e2) | syntax::Syntax::LE(e1, _e2) => g(
+    |                                +                             +
+
+warning: unused variable: `args`
+   --> src/k_normal.rs:209:25
+    |
+209 |                     let args: Vec<id::T> = Vec::new();
+    |                         ^^^^ help: if this is intentional, prefix it with an underscore: `_args`
+
+warning: unused variable: `entry_idx`
+   --> src/virtual.rs:140:9
+    |
+140 |     let entry_idx = *block_map.get(&prog.entry).unwrap(); // Should be 1
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_entry_idx`
+
+warning: unused variable: `l`
+   --> src/virtual.rs:480:24
+    |
+480 |         Atom::ExtArray(l) => {
+    |                        ^ help: if this is intentional, prefix it with an underscore: `_l`
+
+warning: unused variable: `addr`
+   --> src/virtual_interpreter.rs:226:34
+    |
+226 |             Operation::InputByte(addr) => {
+    |                                  ^^^^ help: if this is intentional, prefix it with an underscore: `_addr`
+
+warning: method `get_type` is never used
+  --> src/blocked.rs:61:8
+   |
+60 | impl Term {
+   | --------- method in this implementation
+61 |     fn get_type(&self) -> Type {
+   |        ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `current_block`, `constants`, `current_self`, and `func_arg_counts` are never read
+   --> src/blocked.rs:107:5
+    |
+105 | struct Converter {
+    |        --------- fields in this struct
+106 |     blocks: Vec<(String, Term)>,
+107 |     current_block: Vec<Term>,
+    |     ^^^^^^^^^^^^^
+108 |     constants: HashMap<id::T, i32>,
+    |     ^^^^^^^^^
+109 |     current_self: Option<(id::T, id::L, Vec<id::T>)>,
+    |     ^^^^^^^^^^^^
+110 |     func_arg_counts: HashMap<String, usize>,
+    |     ^^^^^^^^^^^^^^^
+
+warning: method `gen_label` is never used
+   --> src/blocked.rs:132:8
+    |
+114 | impl Converter {
+    | -------------- method in this implementation
+...
+132 |     fn gen_label(&mut self) -> String {
+    |        ^^^^^^^^^
+
+warning: function `add_point` is never used
+   --> src/emit.rs:617:4
+    |
+617 | fn add_point(bf_code: &mut String, n: u32) {
+    |    ^^^^^^^^^
+
+warning: function `sub_point` is never used
+   --> src/emit.rs:624:4
+    |
+624 | fn sub_point(bf_code: &mut String, n: u32) {
+    |    ^^^^^^^^^
+
+warning: function `iszero` is never used
+   --> src/emit.rs:821:4
+    |
+821 | fn iszero(bf_code: &mut String, current_ptr: &mut u32, register: u32, buffer: u32, dest: u32) {
+    |    ^^^^^^
+
+warning: field `func_arg_counts` is never read
+  --> src/intermediate.rs:62:5
+   |
+59 | struct Converter {
+   |        --------- field in this struct
+...
+62 |     func_arg_counts: HashMap<String, usize>, // Func Name -> Arg Count
+   |     ^^^^^^^^^^^^^^^
+
+warning: `mincaml_to_bf` (lib) generated 24 warnings (run `cargo fix --lib -p mincaml_to_bf` to apply 5 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running `target/debug/mincaml_to_bf -s test3.ml`
+DEBUG: CPS Prog:
+let rec fib.10 n.11 k.21 = 
+  let Ti3.12: int = 1 in
+  let rec k_if.23 k.21 Ti22 = 
+    AppCls k.21(Ti22)
+  in
+  let k_cls.24: int = PApp(k_if.23, ["k.21"]) in
+  if n.11 <= Ti3.12 then
+    AppCls k_cls.24(n.11)
+  else
+    let Ti4.13: int = 1 in
+    let Ti5.14: int = n.11 - Ti4.13 in
+    let rec k_cont.30 k_cls.24 n.11 Tu25 = 
+      let Ti6.15: int = Tu25 in
+      let Ti7.16: int = 2 in
+      let Ti8.17: int = n.11 - Ti7.16 in
+      let rec k_cont.28 k_cls.24 Ti6.15 Tu26 = 
+        let Ti9.18: int = Tu26 in
+        let Ti27: int = Ti6.15 + Ti9.18 in
+        AppCls k_cls.24(Ti27)
+      in
+      let k_cls.29: (int -> unit) = PApp(k_cont.28, ["k_cls.24", "Ti6.15"]) in
+      AppDir fib.10(Ti8.17, k_cls.29)
+    in
+    let k_cls.31: (int -> unit) = PApp(k_cont.30, ["k_cls.24", "n.11"]) in
+    AppDir fib.10(Ti5.14, k_cls.31)
+
+let Ti1.19: int = 6 in
+let rec k_cont.36 Tu32 = 
+  let Ti2.20: int = Tu32 in
+  let rec k_cont.34 Tu33 = 
+    AppDir halt(Tu33)
+  in
+  let k_cls.35: (int -> unit) = PApp(k_cont.34, []) in
+  AppDir min_caml_print_int(Ti2.20, k_cls.35)
+in
+let k_cls.37: (int -> unit) = PApp(k_cont.36, []) in
+AppDir fib.10(Ti1.19, k_cls.37)
+DEBUG: Intermediate Prog:
+Entry: main
+Block Count: 14
+Var Count: 45
+Block Map:
+  main: 0
+  k_cont.34: 1
+  k_cont.34_0: 2
+  k_cont.36: 3
+  k_cont.36_0: 4
+  k_if.23: 5
+  k_if.23_1: 6
+  k_cont.28: 7
+  k_cont.28_2: 8
+  k_cont.30: 9
+  k_cont.30_2: 10
+  block.60: 11
+  block.61: 12
+  fib.10: 13
+Var Map:
+  Tu33: 0
+  Tu38: 1
+  Tu32: 2
+  Ti2.20: 3
+  Ti41: 4
+  k_cls.35: 5
+  Tu40: 6
+  Tu39: 7
+  Ti1.19: 8
+  Ti44: 9
+  k_cls.37: 10
+  Tu43: 11
+  Tu42: 12
+  Ti22: 13
+  k.21: 14
+  Tu45: 15
+  Tu26: 16
+  Ti6.15: 17
+  k_cls.24: 18
+  Ti9.18: 19
+  Ti27: 20
+  Tu47: 21
+  Tu25: 22
+  n.11: 23
+  Ti7.16: 24
+  Ti8.17: 25
+  Tu52: 26
+  Tu51: 27
+  Ti50: 28
+  k_cls.29: 29
+  Tu49: 30
+  Tu48: 31
+  Tu46: 32
+  Ti4.13: 33
+  Ti5.14: 34
+  Tu57: 35
+  Tu56: 36
+  Ti55: 37
+  k_cls.31: 38
+  Tu54: 39
+  Tu53: 40
+  Ti3.12: 41
+  Tu59: 42
+  Ti58: 43
+k_cont.34:
+  Let (Tu33: int) = Pop in
+  Let (Tu38: unit) = Push(Tu33) in
+  Jump(halt)
+k_cont.34_0:
+  Jump(k_cont.34)
+k_cont.36:
+  Let (Tu32: int) = Pop in
+  Let (Ti2.20: int) = Tu32 in
+  Let (Ti41: int) = LoadLabel(k_cont.34_0) in
+  Let (k_cls.35: (int -> unit)) = Ti41 in
+  Let (Tu40: unit) = Push(Ti2.20) in
+  Let (Tu39: unit) = Push(k_cls.35) in
+  CallExternal(min_caml_print_int)
+k_cont.36_0:
+  Jump(k_cont.36)
+main:
+  Let (Ti1.19: int) = 6 in
+  Let (Ti44: int) = LoadLabel(k_cont.36_0) in
+  Let (k_cls.37: (int -> unit)) = Ti44 in
+  Let (Tu43: unit) = Push(Ti1.19) in
+  Let (Tu42: unit) = Push(k_cls.37) in
+  Jump(fib.10)
+k_if.23:
+  Let (Ti22: int) = Pop in
+  Let (k.21: int) = Pop in
+  Let (Tu45: unit) = Push(Ti22) in
+  JumpVar(k.21)
+k_if.23_1:
+  Jump(k_if.23)
+k_cont.28:
+  Let (Tu26: int) = Pop in
+  Let (Ti6.15: int) = Pop in
+  Let (k_cls.24: int) = Pop in
+  Let (Ti9.18: int) = Tu26 in
+  Let (Ti27: int) = Ti6.15 + Ti9.18 in
+  Let (Tu47: unit) = Push(Ti27) in
+  JumpVar(k_cls.24)
+k_cont.28_2:
+  Jump(k_cont.28)
+k_cont.30:
+  Let (Tu25: int) = Pop in
+  Let (n.11: int) = Pop in
+  Let (k_cls.24: int) = Pop in
+  Let (Ti6.15: int) = Tu25 in
+  Let (Ti7.16: int) = 2 in
+  Let (Ti8.17: int) = n.11 - Ti7.16 in
+  Let (Tu52: unit) = Push(k_cls.24) in
+  Let (Tu51: unit) = Push(Ti6.15) in
+  Let (Ti50: int) = LoadLabel(k_cont.28_2) in
+  Let (k_cls.29: (int -> unit)) = Ti50 in
+  Let (Tu49: unit) = Push(Ti8.17) in
+  Let (Tu48: unit) = Push(k_cls.29) in
+  Jump(fib.10)
+k_cont.30_2:
+  Jump(k_cont.30)
+block.60:
+  Let (Tu46: unit) = Push(n.11) in
+  JumpVar(k_cls.24)
+block.61:
+  Let (Ti4.13: int) = 1 in
+  Let (Ti5.14: int) = n.11 - Ti4.13 in
+  Let (Tu57: unit) = Push(k_cls.24) in
+  Let (Tu56: unit) = Push(n.11) in
+  Let (Ti55: int) = LoadLabel(k_cont.30_2) in
+  Let (k_cls.31: (int -> unit)) = Ti55 in
+  Let (Tu54: unit) = Push(Ti5.14) in
+  Let (Tu53: unit) = Push(k_cls.31) in
+  Jump(fib.10)
+fib.10:
+  Let (k.21: (unit -> unit)) = Pop in
+  Let (n.11: int) = Pop in
+  Let (Ti3.12: int) = 1 in
+  Let (Tu59: unit) = Push(k.21) in
+  Let (Ti58: int) = LoadLabel(k_if.23_1) in
+  Let (k_cls.24: int) = Ti58 in
+  IfLE(n.11, Ti3.12, Goto(block.60), Goto(block.61))
+
+DEBUG: Starting virtual::f
+DEBUG: Block Map: {"main": 0, "k_cont.36_0": 4, "k_if.23": 5, "k_cont.36": 3, "k_cont.28": 7, "k_cont.30_2": 10, "k_cont.30": 9, "block.60": 11, "k_cont.34_0": 2, "k_cont.28_2": 8, "block.61": 12, "fib.10": 13, "k_cont.34": 1, "k_if.23_1": 6}
+DEBUG: Jump Label: "fib.10"
+DEBUG: Jump Label: "halt"
+DEBUG: Jump Label: "k_cont.34"
+DEBUG: Jump Label: "k_cont.36"
+DEBUG: Jump Label: "k_if.23"
+DEBUG: Jump Label: "k_cont.28"
+DEBUG: Jump Label: "fib.10"
+DEBUG: Jump Label: "k_cont.30"
+DEBUG: Jump Label: "fib.10"
+DEBUG: Virtual Prog generated. Blocks: 14
+DEBUG: Mem[30] <- 1598
+DEBUG: Block 0 Entry. SP=1598, Top=0, Next=0
+DEBUG: SetImm addr=34 val=101598
+DEBUG: Mem[34] <- 101598
+DEBUG: Op Executed. SP (Addr 30) = 1625582
+DEBUG: SetImm addr=30 val=1598
+DEBUG: Mem[30] <- 1598
+DEBUG: Op Executed. SP (Addr 30) = 1598
+DEBUG: SetImm addr=414 val=6
+DEBUG: Mem[414] <- 6
+DEBUG: Op Executed. SP (Addr 30) = 1598
+DEBUG: SetImm addr=446 val=4
+DEBUG: Mem[446] <- 4
+DEBUG: Op Executed. SP (Addr 30) = 1598
+DEBUG: Op Executed. SP (Addr 30) = 1598
+DEBUG: Mem[1598] <- 6
+DEBUG: Mem[1598] <- 6
+DEBUG: Push val=6 from addr=414 at SP=1598
+DEBUG: Mem[30] <- 1630
+DEBUG: Op Executed. SP (Addr 30) = 1630
+DEBUG: SetImm addr=510 val=0
+DEBUG: Mem[510] <- 0
+DEBUG: Op Executed. SP (Addr 30) = 1630
+DEBUG: Mem[1630] <- 4
+DEBUG: Mem[1630] <- 4
+DEBUG: Push val=4 from addr=478 at SP=1630
+DEBUG: Mem[30] <- 1662
+DEBUG: Op Executed. SP (Addr 30) = 1662
+DEBUG: SetImm addr=542 val=0
+DEBUG: Mem[542] <- 0
+DEBUG: Op Executed. SP (Addr 30) = 1662
+DEBUG: Block 13 Entry. SP=1662, Top=4, Next=6
+DEBUG: Pop val=4 into addr=606
+DEBUG: Mem[606] <- 4
+DEBUG: Mem[30] <- 1630
+DEBUG: Pop val=6 into addr=894
+DEBUG: Mem[894] <- 6
+DEBUG: Mem[30] <- 1598
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1598] <- 4
+DEBUG: Mem[1598] <- 4
+DEBUG: Push val=4 from addr=606 at SP=1598
+DEBUG: Mem[30] <- 1630
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 6 - 1 = 5 -> Mem[1566]
+DEBUG: Mem[1566] <- 5
+DEBUG: Block 12 Entry. SP=1630, Top=4, Next=5
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 6 - 1 = 5 -> Mem[1246]
+DEBUG: Mem[1246] <- 5
+DEBUG: Mem[1630] <- 6
+DEBUG: Mem[1630] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1630
+DEBUG: Mem[30] <- 1662
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1662] <- 6
+DEBUG: Mem[1662] <- 6
+DEBUG: Push val=6 from addr=894 at SP=1662
+DEBUG: Mem[30] <- 1694
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1694] <- 5
+DEBUG: Mem[1694] <- 5
+DEBUG: Push val=5 from addr=1246 at SP=1694
+DEBUG: Mem[30] <- 1726
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[1726] <- 10
+DEBUG: Mem[1726] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=1726
+DEBUG: Mem[30] <- 1758
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=1758, Top=10, Next=5
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1726
+DEBUG: Pop val=5 into addr=894
+DEBUG: Mem[894] <- 5
+DEBUG: Mem[30] <- 1694
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1694] <- 10
+DEBUG: Mem[1694] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1694
+DEBUG: Mem[30] <- 1726
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 5 - 1 = 4 -> Mem[1566]
+DEBUG: Mem[1566] <- 4
+DEBUG: Block 12 Entry. SP=1726, Top=10, Next=6
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 5 - 1 = 4 -> Mem[1246]
+DEBUG: Mem[1246] <- 4
+DEBUG: Mem[1726] <- 6
+DEBUG: Mem[1726] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1726
+DEBUG: Mem[30] <- 1758
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1758] <- 5
+DEBUG: Mem[1758] <- 5
+DEBUG: Push val=5 from addr=894 at SP=1758
+DEBUG: Mem[30] <- 1790
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1790] <- 4
+DEBUG: Mem[1790] <- 4
+DEBUG: Push val=4 from addr=1246 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[1822] <- 10
+DEBUG: Mem[1822] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=1854, Top=10, Next=4
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1822
+DEBUG: Pop val=4 into addr=894
+DEBUG: Mem[894] <- 4
+DEBUG: Mem[30] <- 1790
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1790] <- 10
+DEBUG: Mem[1790] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 4 - 1 = 3 -> Mem[1566]
+DEBUG: Mem[1566] <- 3
+DEBUG: Block 12 Entry. SP=1822, Top=10, Next=5
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 4 - 1 = 3 -> Mem[1246]
+DEBUG: Mem[1246] <- 3
+DEBUG: Mem[1822] <- 6
+DEBUG: Mem[1822] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1854] <- 4
+DEBUG: Mem[1854] <- 4
+DEBUG: Push val=4 from addr=894 at SP=1854
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1886] <- 3
+DEBUG: Mem[1886] <- 3
+DEBUG: Push val=3 from addr=1246 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[1918] <- 10
+DEBUG: Mem[1918] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=1950, Top=10, Next=3
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=3 into addr=894
+DEBUG: Mem[894] <- 3
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1886] <- 10
+DEBUG: Mem[1886] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 3 - 1 = 2 -> Mem[1566]
+DEBUG: Mem[1566] <- 2
+DEBUG: Block 12 Entry. SP=1918, Top=10, Next=4
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 3 - 1 = 2 -> Mem[1246]
+DEBUG: Mem[1246] <- 2
+DEBUG: Mem[1918] <- 6
+DEBUG: Mem[1918] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1950] <- 3
+DEBUG: Mem[1950] <- 3
+DEBUG: Push val=3 from addr=894 at SP=1950
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1982] <- 2
+DEBUG: Mem[1982] <- 2
+DEBUG: Push val=2 from addr=1246 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[2014] <- 10
+DEBUG: Mem[2014] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=2046, Top=10, Next=2
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1982] <- 10
+DEBUG: Mem[1982] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 2 - 1 = 1 -> Mem[1566]
+DEBUG: Mem[1566] <- 1
+DEBUG: Block 12 Entry. SP=2014, Top=10, Next=3
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 2 - 1 = 1 -> Mem[1246]
+DEBUG: Mem[1246] <- 1
+DEBUG: Mem[2014] <- 6
+DEBUG: Mem[2014] <- 6
+DEBUG: Push val=6 from addr=734 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[2046] <- 2
+DEBUG: Mem[2046] <- 2
+DEBUG: Push val=2 from addr=894 at SP=2046
+DEBUG: Mem[30] <- 2078
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[2078] <- 1
+DEBUG: Mem[2078] <- 1
+DEBUG: Push val=1 from addr=1246 at SP=2078
+DEBUG: Mem[30] <- 2110
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[2110] <- 10
+DEBUG: Mem[2110] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=2110
+DEBUG: Mem[30] <- 2142
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=2142, Top=10, Next=1
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 2110
+DEBUG: Pop val=1 into addr=894
+DEBUG: Mem[894] <- 1
+DEBUG: Mem[30] <- 2078
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[2078] <- 10
+DEBUG: Mem[2078] <- 10
+DEBUG: Push val=10 from addr=606 at SP=2078
+DEBUG: Mem[30] <- 2110
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 1 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=2110, Top=10, Next=2
+DEBUG: Mem[2110] <- 1
+DEBUG: Mem[2110] <- 1
+DEBUG: Push val=1 from addr=894 at SP=2110
+DEBUG: Mem[30] <- 2142
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2142, Top=1, Next=10
+DEBUG: Block 5 Entry. SP=2142, Top=1, Next=10
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 2110
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 2078
+DEBUG: Mem[2078] <- 1
+DEBUG: Mem[2078] <- 1
+DEBUG: Push val=1 from addr=574 at SP=2078
+DEBUG: Mem[30] <- 2110
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=2110, Top=1, Next=2
+DEBUG: Block 9 Entry. SP=2110, Top=1, Next=2
+DEBUG: Pop val=1 into addr=862
+DEBUG: Mem[862] <- 1
+DEBUG: Mem[30] <- 2078
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 2046
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 2 - 2 = 0 -> Mem[958]
+DEBUG: Mem[958] <- 0
+DEBUG: Mem[2014] <- 6
+DEBUG: Mem[2014] <- 6
+DEBUG: Push val=6 from addr=734 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[2046] <- 1
+DEBUG: Mem[2046] <- 1
+DEBUG: Push val=1 from addr=702 at SP=2046
+DEBUG: Mem[30] <- 2078
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[2078] <- 0
+DEBUG: Mem[2078] <- 0
+DEBUG: Push val=0 from addr=958 at SP=2078
+DEBUG: Mem[30] <- 2110
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[2110] <- 8
+DEBUG: Mem[2110] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=2110
+DEBUG: Mem[30] <- 2142
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=2142, Top=8, Next=0
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 2110
+DEBUG: Pop val=0 into addr=894
+DEBUG: Mem[894] <- 0
+DEBUG: Mem[30] <- 2078
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[2078] <- 8
+DEBUG: Mem[2078] <- 8
+DEBUG: Push val=8 from addr=606 at SP=2078
+DEBUG: Mem[30] <- 2110
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 0 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=2110, Top=8, Next=1
+DEBUG: Mem[2110] <- 0
+DEBUG: Mem[2110] <- 0
+DEBUG: Push val=0 from addr=894 at SP=2110
+DEBUG: Mem[30] <- 2142
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2142, Top=0, Next=8
+DEBUG: Block 5 Entry. SP=2142, Top=0, Next=8
+DEBUG: Pop val=0 into addr=574
+DEBUG: Mem[574] <- 0
+DEBUG: Mem[30] <- 2110
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 2078
+DEBUG: Mem[2078] <- 0
+DEBUG: Mem[2078] <- 0
+DEBUG: Push val=0 from addr=574 at SP=2078
+DEBUG: Mem[30] <- 2110
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=2110, Top=0, Next=1
+DEBUG: Block 7 Entry. SP=2110, Top=0, Next=1
+DEBUG: Pop val=0 into addr=670
+DEBUG: Mem[670] <- 0
+DEBUG: Mem[30] <- 2078
+DEBUG: Pop val=1 into addr=702
+DEBUG: Mem[702] <- 1
+DEBUG: Mem[30] <- 2046
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 2014
+DEBUG: Add 1 + 0 = 1 -> Mem[798]
+DEBUG: Mem[798] <- 1
+DEBUG: Mem[2014] <- 1
+DEBUG: Mem[2014] <- 1
+DEBUG: Push val=1 from addr=798 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2046, Top=1, Next=10
+DEBUG: Block 5 Entry. SP=2046, Top=1, Next=10
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1982
+DEBUG: Mem[1982] <- 1
+DEBUG: Mem[1982] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=2014, Top=1, Next=3
+DEBUG: Block 9 Entry. SP=2014, Top=1, Next=3
+DEBUG: Pop val=1 into addr=862
+DEBUG: Mem[862] <- 1
+DEBUG: Mem[30] <- 1982
+DEBUG: Pop val=3 into addr=894
+DEBUG: Mem[894] <- 3
+DEBUG: Mem[30] <- 1950
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 3 - 2 = 1 -> Mem[958]
+DEBUG: Mem[958] <- 1
+DEBUG: Mem[1918] <- 6
+DEBUG: Mem[1918] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1950] <- 1
+DEBUG: Mem[1950] <- 1
+DEBUG: Push val=1 from addr=702 at SP=1950
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1982] <- 1
+DEBUG: Mem[1982] <- 1
+DEBUG: Push val=1 from addr=958 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[2014] <- 8
+DEBUG: Mem[2014] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=2046, Top=8, Next=1
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=1 into addr=894
+DEBUG: Mem[894] <- 1
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1982] <- 8
+DEBUG: Mem[1982] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 1 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=2014, Top=8, Next=1
+DEBUG: Mem[2014] <- 1
+DEBUG: Mem[2014] <- 1
+DEBUG: Push val=1 from addr=894 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2046, Top=1, Next=8
+DEBUG: Block 5 Entry. SP=2046, Top=1, Next=8
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1982
+DEBUG: Mem[1982] <- 1
+DEBUG: Mem[1982] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=2014, Top=1, Next=1
+DEBUG: Block 7 Entry. SP=2014, Top=1, Next=1
+DEBUG: Pop val=1 into addr=670
+DEBUG: Mem[670] <- 1
+DEBUG: Mem[30] <- 1982
+DEBUG: Pop val=1 into addr=702
+DEBUG: Mem[702] <- 1
+DEBUG: Mem[30] <- 1950
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1918
+DEBUG: Add 1 + 1 = 2 -> Mem[798]
+DEBUG: Mem[798] <- 2
+DEBUG: Mem[1918] <- 2
+DEBUG: Mem[1918] <- 2
+DEBUG: Push val=2 from addr=798 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1950, Top=2, Next=10
+DEBUG: Block 5 Entry. SP=1950, Top=2, Next=10
+DEBUG: Pop val=2 into addr=574
+DEBUG: Mem[574] <- 2
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1886
+DEBUG: Mem[1886] <- 2
+DEBUG: Mem[1886] <- 2
+DEBUG: Push val=2 from addr=574 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=1918, Top=2, Next=4
+DEBUG: Block 9 Entry. SP=1918, Top=2, Next=4
+DEBUG: Pop val=2 into addr=862
+DEBUG: Mem[862] <- 2
+DEBUG: Mem[30] <- 1886
+DEBUG: Pop val=4 into addr=894
+DEBUG: Mem[894] <- 4
+DEBUG: Mem[30] <- 1854
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 4 - 2 = 2 -> Mem[958]
+DEBUG: Mem[958] <- 2
+DEBUG: Mem[1822] <- 6
+DEBUG: Mem[1822] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1854] <- 2
+DEBUG: Mem[1854] <- 2
+DEBUG: Push val=2 from addr=702 at SP=1854
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1886] <- 2
+DEBUG: Mem[1886] <- 2
+DEBUG: Push val=2 from addr=958 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[1918] <- 8
+DEBUG: Mem[1918] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=1950, Top=8, Next=2
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1886] <- 8
+DEBUG: Mem[1886] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 2 - 1 = 1 -> Mem[1566]
+DEBUG: Mem[1566] <- 1
+DEBUG: Block 12 Entry. SP=1918, Top=8, Next=2
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 2 - 1 = 1 -> Mem[1246]
+DEBUG: Mem[1246] <- 1
+DEBUG: Mem[1918] <- 6
+DEBUG: Mem[1918] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1950] <- 2
+DEBUG: Mem[1950] <- 2
+DEBUG: Push val=2 from addr=894 at SP=1950
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1982] <- 1
+DEBUG: Mem[1982] <- 1
+DEBUG: Push val=1 from addr=1246 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[2014] <- 10
+DEBUG: Mem[2014] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=2046, Top=10, Next=1
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=1 into addr=894
+DEBUG: Mem[894] <- 1
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1982] <- 10
+DEBUG: Mem[1982] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 1 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=2014, Top=10, Next=2
+DEBUG: Mem[2014] <- 1
+DEBUG: Mem[2014] <- 1
+DEBUG: Push val=1 from addr=894 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2046, Top=1, Next=10
+DEBUG: Block 5 Entry. SP=2046, Top=1, Next=10
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1982
+DEBUG: Mem[1982] <- 1
+DEBUG: Mem[1982] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=2014, Top=1, Next=2
+DEBUG: Block 9 Entry. SP=2014, Top=1, Next=2
+DEBUG: Pop val=1 into addr=862
+DEBUG: Mem[862] <- 1
+DEBUG: Mem[30] <- 1982
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 1950
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 2 - 2 = 0 -> Mem[958]
+DEBUG: Mem[958] <- 0
+DEBUG: Mem[1918] <- 6
+DEBUG: Mem[1918] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1950] <- 1
+DEBUG: Mem[1950] <- 1
+DEBUG: Push val=1 from addr=702 at SP=1950
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1982] <- 0
+DEBUG: Mem[1982] <- 0
+DEBUG: Push val=0 from addr=958 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[2014] <- 8
+DEBUG: Mem[2014] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=2046, Top=8, Next=0
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=0 into addr=894
+DEBUG: Mem[894] <- 0
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1982] <- 8
+DEBUG: Mem[1982] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 0 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=2014, Top=8, Next=1
+DEBUG: Mem[2014] <- 0
+DEBUG: Mem[2014] <- 0
+DEBUG: Push val=0 from addr=894 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2046, Top=0, Next=8
+DEBUG: Block 5 Entry. SP=2046, Top=0, Next=8
+DEBUG: Pop val=0 into addr=574
+DEBUG: Mem[574] <- 0
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1982
+DEBUG: Mem[1982] <- 0
+DEBUG: Mem[1982] <- 0
+DEBUG: Push val=0 from addr=574 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=2014, Top=0, Next=1
+DEBUG: Block 7 Entry. SP=2014, Top=0, Next=1
+DEBUG: Pop val=0 into addr=670
+DEBUG: Mem[670] <- 0
+DEBUG: Mem[30] <- 1982
+DEBUG: Pop val=1 into addr=702
+DEBUG: Mem[702] <- 1
+DEBUG: Mem[30] <- 1950
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1918
+DEBUG: Add 1 + 0 = 1 -> Mem[798]
+DEBUG: Mem[798] <- 1
+DEBUG: Mem[1918] <- 1
+DEBUG: Mem[1918] <- 1
+DEBUG: Push val=1 from addr=798 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1950, Top=1, Next=8
+DEBUG: Block 5 Entry. SP=1950, Top=1, Next=8
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1886
+DEBUG: Mem[1886] <- 1
+DEBUG: Mem[1886] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=1918, Top=1, Next=2
+DEBUG: Block 7 Entry. SP=1918, Top=1, Next=2
+DEBUG: Pop val=1 into addr=670
+DEBUG: Mem[670] <- 1
+DEBUG: Mem[30] <- 1886
+DEBUG: Pop val=2 into addr=702
+DEBUG: Mem[702] <- 2
+DEBUG: Mem[30] <- 1854
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1822
+DEBUG: Add 2 + 1 = 3 -> Mem[798]
+DEBUG: Mem[798] <- 3
+DEBUG: Mem[1822] <- 3
+DEBUG: Mem[1822] <- 3
+DEBUG: Push val=3 from addr=798 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1854, Top=3, Next=10
+DEBUG: Block 5 Entry. SP=1854, Top=3, Next=10
+DEBUG: Pop val=3 into addr=574
+DEBUG: Mem[574] <- 3
+DEBUG: Mem[30] <- 1822
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1790
+DEBUG: Mem[1790] <- 3
+DEBUG: Mem[1790] <- 3
+DEBUG: Push val=3 from addr=574 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=1822, Top=3, Next=5
+DEBUG: Block 9 Entry. SP=1822, Top=3, Next=5
+DEBUG: Pop val=3 into addr=862
+DEBUG: Mem[862] <- 3
+DEBUG: Mem[30] <- 1790
+DEBUG: Pop val=5 into addr=894
+DEBUG: Mem[894] <- 5
+DEBUG: Mem[30] <- 1758
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1726
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 5 - 2 = 3 -> Mem[958]
+DEBUG: Mem[958] <- 3
+DEBUG: Mem[1726] <- 6
+DEBUG: Mem[1726] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1726
+DEBUG: Mem[30] <- 1758
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1758] <- 3
+DEBUG: Mem[1758] <- 3
+DEBUG: Push val=3 from addr=702 at SP=1758
+DEBUG: Mem[30] <- 1790
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1790] <- 3
+DEBUG: Mem[1790] <- 3
+DEBUG: Push val=3 from addr=958 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[1822] <- 8
+DEBUG: Mem[1822] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=1854, Top=8, Next=3
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1822
+DEBUG: Pop val=3 into addr=894
+DEBUG: Mem[894] <- 3
+DEBUG: Mem[30] <- 1790
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1790] <- 8
+DEBUG: Mem[1790] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 3 - 1 = 2 -> Mem[1566]
+DEBUG: Mem[1566] <- 2
+DEBUG: Block 12 Entry. SP=1822, Top=8, Next=3
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 3 - 1 = 2 -> Mem[1246]
+DEBUG: Mem[1246] <- 2
+DEBUG: Mem[1822] <- 6
+DEBUG: Mem[1822] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1854] <- 3
+DEBUG: Mem[1854] <- 3
+DEBUG: Push val=3 from addr=894 at SP=1854
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1886] <- 2
+DEBUG: Mem[1886] <- 2
+DEBUG: Push val=2 from addr=1246 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[1918] <- 10
+DEBUG: Mem[1918] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=1950, Top=10, Next=2
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1886] <- 10
+DEBUG: Mem[1886] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 2 - 1 = 1 -> Mem[1566]
+DEBUG: Mem[1566] <- 1
+DEBUG: Block 12 Entry. SP=1918, Top=10, Next=3
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 2 - 1 = 1 -> Mem[1246]
+DEBUG: Mem[1246] <- 1
+DEBUG: Mem[1918] <- 6
+DEBUG: Mem[1918] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1950] <- 2
+DEBUG: Mem[1950] <- 2
+DEBUG: Push val=2 from addr=894 at SP=1950
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1982] <- 1
+DEBUG: Mem[1982] <- 1
+DEBUG: Push val=1 from addr=1246 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[2014] <- 10
+DEBUG: Mem[2014] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=2046, Top=10, Next=1
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=1 into addr=894
+DEBUG: Mem[894] <- 1
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1982] <- 10
+DEBUG: Mem[1982] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 1 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=2014, Top=10, Next=2
+DEBUG: Mem[2014] <- 1
+DEBUG: Mem[2014] <- 1
+DEBUG: Push val=1 from addr=894 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2046, Top=1, Next=10
+DEBUG: Block 5 Entry. SP=2046, Top=1, Next=10
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1982
+DEBUG: Mem[1982] <- 1
+DEBUG: Mem[1982] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=2014, Top=1, Next=2
+DEBUG: Block 9 Entry. SP=2014, Top=1, Next=2
+DEBUG: Pop val=1 into addr=862
+DEBUG: Mem[862] <- 1
+DEBUG: Mem[30] <- 1982
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 1950
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 2 - 2 = 0 -> Mem[958]
+DEBUG: Mem[958] <- 0
+DEBUG: Mem[1918] <- 6
+DEBUG: Mem[1918] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1950] <- 1
+DEBUG: Mem[1950] <- 1
+DEBUG: Push val=1 from addr=702 at SP=1950
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1982] <- 0
+DEBUG: Mem[1982] <- 0
+DEBUG: Push val=0 from addr=958 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[2014] <- 8
+DEBUG: Mem[2014] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=2046, Top=8, Next=0
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=0 into addr=894
+DEBUG: Mem[894] <- 0
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1982] <- 8
+DEBUG: Mem[1982] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 0 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=2014, Top=8, Next=1
+DEBUG: Mem[2014] <- 0
+DEBUG: Mem[2014] <- 0
+DEBUG: Push val=0 from addr=894 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2046, Top=0, Next=8
+DEBUG: Block 5 Entry. SP=2046, Top=0, Next=8
+DEBUG: Pop val=0 into addr=574
+DEBUG: Mem[574] <- 0
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1982
+DEBUG: Mem[1982] <- 0
+DEBUG: Mem[1982] <- 0
+DEBUG: Push val=0 from addr=574 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=2014, Top=0, Next=1
+DEBUG: Block 7 Entry. SP=2014, Top=0, Next=1
+DEBUG: Pop val=0 into addr=670
+DEBUG: Mem[670] <- 0
+DEBUG: Mem[30] <- 1982
+DEBUG: Pop val=1 into addr=702
+DEBUG: Mem[702] <- 1
+DEBUG: Mem[30] <- 1950
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1918
+DEBUG: Add 1 + 0 = 1 -> Mem[798]
+DEBUG: Mem[798] <- 1
+DEBUG: Mem[1918] <- 1
+DEBUG: Mem[1918] <- 1
+DEBUG: Push val=1 from addr=798 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1950, Top=1, Next=10
+DEBUG: Block 5 Entry. SP=1950, Top=1, Next=10
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1886
+DEBUG: Mem[1886] <- 1
+DEBUG: Mem[1886] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=1918, Top=1, Next=3
+DEBUG: Block 9 Entry. SP=1918, Top=1, Next=3
+DEBUG: Pop val=1 into addr=862
+DEBUG: Mem[862] <- 1
+DEBUG: Mem[30] <- 1886
+DEBUG: Pop val=3 into addr=894
+DEBUG: Mem[894] <- 3
+DEBUG: Mem[30] <- 1854
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 3 - 2 = 1 -> Mem[958]
+DEBUG: Mem[958] <- 1
+DEBUG: Mem[1822] <- 6
+DEBUG: Mem[1822] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1854] <- 1
+DEBUG: Mem[1854] <- 1
+DEBUG: Push val=1 from addr=702 at SP=1854
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1886] <- 1
+DEBUG: Mem[1886] <- 1
+DEBUG: Push val=1 from addr=958 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[1918] <- 8
+DEBUG: Mem[1918] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=1950, Top=8, Next=1
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=1 into addr=894
+DEBUG: Mem[894] <- 1
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1886] <- 8
+DEBUG: Mem[1886] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 1 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=1918, Top=8, Next=1
+DEBUG: Mem[1918] <- 1
+DEBUG: Mem[1918] <- 1
+DEBUG: Push val=1 from addr=894 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1950, Top=1, Next=8
+DEBUG: Block 5 Entry. SP=1950, Top=1, Next=8
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1886
+DEBUG: Mem[1886] <- 1
+DEBUG: Mem[1886] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=1918, Top=1, Next=1
+DEBUG: Block 7 Entry. SP=1918, Top=1, Next=1
+DEBUG: Pop val=1 into addr=670
+DEBUG: Mem[670] <- 1
+DEBUG: Mem[30] <- 1886
+DEBUG: Pop val=1 into addr=702
+DEBUG: Mem[702] <- 1
+DEBUG: Mem[30] <- 1854
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1822
+DEBUG: Add 1 + 1 = 2 -> Mem[798]
+DEBUG: Mem[798] <- 2
+DEBUG: Mem[1822] <- 2
+DEBUG: Mem[1822] <- 2
+DEBUG: Push val=2 from addr=798 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1854, Top=2, Next=8
+DEBUG: Block 5 Entry. SP=1854, Top=2, Next=8
+DEBUG: Pop val=2 into addr=574
+DEBUG: Mem[574] <- 2
+DEBUG: Mem[30] <- 1822
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1790
+DEBUG: Mem[1790] <- 2
+DEBUG: Mem[1790] <- 2
+DEBUG: Push val=2 from addr=574 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=1822, Top=2, Next=3
+DEBUG: Block 7 Entry. SP=1822, Top=2, Next=3
+DEBUG: Pop val=2 into addr=670
+DEBUG: Mem[670] <- 2
+DEBUG: Mem[30] <- 1790
+DEBUG: Pop val=3 into addr=702
+DEBUG: Mem[702] <- 3
+DEBUG: Mem[30] <- 1758
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1726
+DEBUG: Add 3 + 2 = 5 -> Mem[798]
+DEBUG: Mem[798] <- 5
+DEBUG: Mem[1726] <- 5
+DEBUG: Mem[1726] <- 5
+DEBUG: Push val=5 from addr=798 at SP=1726
+DEBUG: Mem[30] <- 1758
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1758, Top=5, Next=10
+DEBUG: Block 5 Entry. SP=1758, Top=5, Next=10
+DEBUG: Pop val=5 into addr=574
+DEBUG: Mem[574] <- 5
+DEBUG: Mem[30] <- 1726
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1694
+DEBUG: Mem[1694] <- 5
+DEBUG: Mem[1694] <- 5
+DEBUG: Push val=5 from addr=574 at SP=1694
+DEBUG: Mem[30] <- 1726
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=1726, Top=5, Next=6
+DEBUG: Block 9 Entry. SP=1726, Top=5, Next=6
+DEBUG: Pop val=5 into addr=862
+DEBUG: Mem[862] <- 5
+DEBUG: Mem[30] <- 1694
+DEBUG: Pop val=6 into addr=894
+DEBUG: Mem[894] <- 6
+DEBUG: Mem[30] <- 1662
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1630
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 6 - 2 = 4 -> Mem[958]
+DEBUG: Mem[958] <- 4
+DEBUG: Mem[1630] <- 6
+DEBUG: Mem[1630] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1630
+DEBUG: Mem[30] <- 1662
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1662] <- 5
+DEBUG: Mem[1662] <- 5
+DEBUG: Push val=5 from addr=702 at SP=1662
+DEBUG: Mem[30] <- 1694
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1694] <- 4
+DEBUG: Mem[1694] <- 4
+DEBUG: Push val=4 from addr=958 at SP=1694
+DEBUG: Mem[30] <- 1726
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[1726] <- 8
+DEBUG: Mem[1726] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=1726
+DEBUG: Mem[30] <- 1758
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=1758, Top=8, Next=4
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1726
+DEBUG: Pop val=4 into addr=894
+DEBUG: Mem[894] <- 4
+DEBUG: Mem[30] <- 1694
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1694] <- 8
+DEBUG: Mem[1694] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1694
+DEBUG: Mem[30] <- 1726
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 4 - 1 = 3 -> Mem[1566]
+DEBUG: Mem[1566] <- 3
+DEBUG: Block 12 Entry. SP=1726, Top=8, Next=5
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 4 - 1 = 3 -> Mem[1246]
+DEBUG: Mem[1246] <- 3
+DEBUG: Mem[1726] <- 6
+DEBUG: Mem[1726] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1726
+DEBUG: Mem[30] <- 1758
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1758] <- 4
+DEBUG: Mem[1758] <- 4
+DEBUG: Push val=4 from addr=894 at SP=1758
+DEBUG: Mem[30] <- 1790
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1790] <- 3
+DEBUG: Mem[1790] <- 3
+DEBUG: Push val=3 from addr=1246 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[1822] <- 10
+DEBUG: Mem[1822] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=1854, Top=10, Next=3
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1822
+DEBUG: Pop val=3 into addr=894
+DEBUG: Mem[894] <- 3
+DEBUG: Mem[30] <- 1790
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1790] <- 10
+DEBUG: Mem[1790] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 3 - 1 = 2 -> Mem[1566]
+DEBUG: Mem[1566] <- 2
+DEBUG: Block 12 Entry. SP=1822, Top=10, Next=4
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 3 - 1 = 2 -> Mem[1246]
+DEBUG: Mem[1246] <- 2
+DEBUG: Mem[1822] <- 6
+DEBUG: Mem[1822] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1854] <- 3
+DEBUG: Mem[1854] <- 3
+DEBUG: Push val=3 from addr=894 at SP=1854
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1886] <- 2
+DEBUG: Mem[1886] <- 2
+DEBUG: Push val=2 from addr=1246 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[1918] <- 10
+DEBUG: Mem[1918] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=1950, Top=10, Next=2
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1886] <- 10
+DEBUG: Mem[1886] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 2 - 1 = 1 -> Mem[1566]
+DEBUG: Mem[1566] <- 1
+DEBUG: Block 12 Entry. SP=1918, Top=10, Next=3
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 2 - 1 = 1 -> Mem[1246]
+DEBUG: Mem[1246] <- 1
+DEBUG: Mem[1918] <- 6
+DEBUG: Mem[1918] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1950] <- 2
+DEBUG: Mem[1950] <- 2
+DEBUG: Push val=2 from addr=894 at SP=1950
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1982] <- 1
+DEBUG: Mem[1982] <- 1
+DEBUG: Push val=1 from addr=1246 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[2014] <- 10
+DEBUG: Mem[2014] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=2046, Top=10, Next=1
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=1 into addr=894
+DEBUG: Mem[894] <- 1
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1982] <- 10
+DEBUG: Mem[1982] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 1 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=2014, Top=10, Next=2
+DEBUG: Mem[2014] <- 1
+DEBUG: Mem[2014] <- 1
+DEBUG: Push val=1 from addr=894 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2046, Top=1, Next=10
+DEBUG: Block 5 Entry. SP=2046, Top=1, Next=10
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1982
+DEBUG: Mem[1982] <- 1
+DEBUG: Mem[1982] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=2014, Top=1, Next=2
+DEBUG: Block 9 Entry. SP=2014, Top=1, Next=2
+DEBUG: Pop val=1 into addr=862
+DEBUG: Mem[862] <- 1
+DEBUG: Mem[30] <- 1982
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 1950
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 2 - 2 = 0 -> Mem[958]
+DEBUG: Mem[958] <- 0
+DEBUG: Mem[1918] <- 6
+DEBUG: Mem[1918] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1950] <- 1
+DEBUG: Mem[1950] <- 1
+DEBUG: Push val=1 from addr=702 at SP=1950
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1982] <- 0
+DEBUG: Mem[1982] <- 0
+DEBUG: Push val=0 from addr=958 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[2014] <- 8
+DEBUG: Mem[2014] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=2046, Top=8, Next=0
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=0 into addr=894
+DEBUG: Mem[894] <- 0
+DEBUG: Mem[30] <- 1982
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1982] <- 8
+DEBUG: Mem[1982] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 0 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=2014, Top=8, Next=1
+DEBUG: Mem[2014] <- 0
+DEBUG: Mem[2014] <- 0
+DEBUG: Push val=0 from addr=894 at SP=2014
+DEBUG: Mem[30] <- 2046
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=2046, Top=0, Next=8
+DEBUG: Block 5 Entry. SP=2046, Top=0, Next=8
+DEBUG: Pop val=0 into addr=574
+DEBUG: Mem[574] <- 0
+DEBUG: Mem[30] <- 2014
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1982
+DEBUG: Mem[1982] <- 0
+DEBUG: Mem[1982] <- 0
+DEBUG: Push val=0 from addr=574 at SP=1982
+DEBUG: Mem[30] <- 2014
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=2014, Top=0, Next=1
+DEBUG: Block 7 Entry. SP=2014, Top=0, Next=1
+DEBUG: Pop val=0 into addr=670
+DEBUG: Mem[670] <- 0
+DEBUG: Mem[30] <- 1982
+DEBUG: Pop val=1 into addr=702
+DEBUG: Mem[702] <- 1
+DEBUG: Mem[30] <- 1950
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1918
+DEBUG: Add 1 + 0 = 1 -> Mem[798]
+DEBUG: Mem[798] <- 1
+DEBUG: Mem[1918] <- 1
+DEBUG: Mem[1918] <- 1
+DEBUG: Push val=1 from addr=798 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1950, Top=1, Next=10
+DEBUG: Block 5 Entry. SP=1950, Top=1, Next=10
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1886
+DEBUG: Mem[1886] <- 1
+DEBUG: Mem[1886] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=1918, Top=1, Next=3
+DEBUG: Block 9 Entry. SP=1918, Top=1, Next=3
+DEBUG: Pop val=1 into addr=862
+DEBUG: Mem[862] <- 1
+DEBUG: Mem[30] <- 1886
+DEBUG: Pop val=3 into addr=894
+DEBUG: Mem[894] <- 3
+DEBUG: Mem[30] <- 1854
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 3 - 2 = 1 -> Mem[958]
+DEBUG: Mem[958] <- 1
+DEBUG: Mem[1822] <- 6
+DEBUG: Mem[1822] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1854] <- 1
+DEBUG: Mem[1854] <- 1
+DEBUG: Push val=1 from addr=702 at SP=1854
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1886] <- 1
+DEBUG: Mem[1886] <- 1
+DEBUG: Push val=1 from addr=958 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[1918] <- 8
+DEBUG: Mem[1918] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=1950, Top=8, Next=1
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=1 into addr=894
+DEBUG: Mem[894] <- 1
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1886] <- 8
+DEBUG: Mem[1886] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 1 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=1918, Top=8, Next=1
+DEBUG: Mem[1918] <- 1
+DEBUG: Mem[1918] <- 1
+DEBUG: Push val=1 from addr=894 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1950, Top=1, Next=8
+DEBUG: Block 5 Entry. SP=1950, Top=1, Next=8
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1886
+DEBUG: Mem[1886] <- 1
+DEBUG: Mem[1886] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=1918, Top=1, Next=1
+DEBUG: Block 7 Entry. SP=1918, Top=1, Next=1
+DEBUG: Pop val=1 into addr=670
+DEBUG: Mem[670] <- 1
+DEBUG: Mem[30] <- 1886
+DEBUG: Pop val=1 into addr=702
+DEBUG: Mem[702] <- 1
+DEBUG: Mem[30] <- 1854
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1822
+DEBUG: Add 1 + 1 = 2 -> Mem[798]
+DEBUG: Mem[798] <- 2
+DEBUG: Mem[1822] <- 2
+DEBUG: Mem[1822] <- 2
+DEBUG: Push val=2 from addr=798 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1854, Top=2, Next=10
+DEBUG: Block 5 Entry. SP=1854, Top=2, Next=10
+DEBUG: Pop val=2 into addr=574
+DEBUG: Mem[574] <- 2
+DEBUG: Mem[30] <- 1822
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1790
+DEBUG: Mem[1790] <- 2
+DEBUG: Mem[1790] <- 2
+DEBUG: Push val=2 from addr=574 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=1822, Top=2, Next=4
+DEBUG: Block 9 Entry. SP=1822, Top=2, Next=4
+DEBUG: Pop val=2 into addr=862
+DEBUG: Mem[862] <- 2
+DEBUG: Mem[30] <- 1790
+DEBUG: Pop val=4 into addr=894
+DEBUG: Mem[894] <- 4
+DEBUG: Mem[30] <- 1758
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1726
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 4 - 2 = 2 -> Mem[958]
+DEBUG: Mem[958] <- 2
+DEBUG: Mem[1726] <- 6
+DEBUG: Mem[1726] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1726
+DEBUG: Mem[30] <- 1758
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1758] <- 2
+DEBUG: Mem[1758] <- 2
+DEBUG: Push val=2 from addr=702 at SP=1758
+DEBUG: Mem[30] <- 1790
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1790] <- 2
+DEBUG: Mem[1790] <- 2
+DEBUG: Push val=2 from addr=958 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[1822] <- 8
+DEBUG: Mem[1822] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=1854, Top=8, Next=2
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1822
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 1790
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1790] <- 8
+DEBUG: Mem[1790] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 2 - 1 = 1 -> Mem[1566]
+DEBUG: Mem[1566] <- 1
+DEBUG: Block 12 Entry. SP=1822, Top=8, Next=2
+DEBUG: SetImm addr=1214 val=1
+DEBUG: Mem[1214] <- 1
+DEBUG: Sub 2 - 1 = 1 -> Mem[1246]
+DEBUG: Mem[1246] <- 1
+DEBUG: Mem[1822] <- 6
+DEBUG: Mem[1822] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=1278 val=0
+DEBUG: Mem[1278] <- 0
+DEBUG: Mem[1854] <- 2
+DEBUG: Mem[1854] <- 2
+DEBUG: Push val=2 from addr=894 at SP=1854
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1310 val=0
+DEBUG: Mem[1310] <- 0
+DEBUG: SetImm addr=1342 val=10
+DEBUG: Mem[1342] <- 10
+DEBUG: Mem[1886] <- 1
+DEBUG: Mem[1886] <- 1
+DEBUG: Push val=1 from addr=1246 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1406 val=0
+DEBUG: Mem[1406] <- 0
+DEBUG: Mem[1918] <- 10
+DEBUG: Mem[1918] <- 10
+DEBUG: Push val=10 from addr=1374 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1438 val=0
+DEBUG: Mem[1438] <- 0
+DEBUG: Block 13 Entry. SP=1950, Top=10, Next=1
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=1 into addr=894
+DEBUG: Mem[894] <- 1
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1886] <- 10
+DEBUG: Mem[1886] <- 10
+DEBUG: Push val=10 from addr=606 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 1 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=1918, Top=10, Next=2
+DEBUG: Mem[1918] <- 1
+DEBUG: Mem[1918] <- 1
+DEBUG: Push val=1 from addr=894 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1950, Top=1, Next=10
+DEBUG: Block 5 Entry. SP=1950, Top=1, Next=10
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=10 into addr=606
+DEBUG: Mem[606] <- 10
+DEBUG: Mem[30] <- 1886
+DEBUG: Mem[1886] <- 1
+DEBUG: Mem[1886] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=10
+DEBUG: Block 10 Entry. SP=1918, Top=1, Next=2
+DEBUG: Block 9 Entry. SP=1918, Top=1, Next=2
+DEBUG: Pop val=1 into addr=862
+DEBUG: Mem[862] <- 1
+DEBUG: Mem[30] <- 1886
+DEBUG: Pop val=2 into addr=894
+DEBUG: Mem[894] <- 2
+DEBUG: Mem[30] <- 1854
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=926 val=2
+DEBUG: Mem[926] <- 2
+DEBUG: Sub 2 - 2 = 0 -> Mem[958]
+DEBUG: Mem[958] <- 0
+DEBUG: Mem[1822] <- 6
+DEBUG: Mem[1822] <- 6
+DEBUG: Push val=6 from addr=734 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=990 val=0
+DEBUG: Mem[990] <- 0
+DEBUG: Mem[1854] <- 1
+DEBUG: Mem[1854] <- 1
+DEBUG: Push val=1 from addr=702 at SP=1854
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1022 val=0
+DEBUG: Mem[1022] <- 0
+DEBUG: SetImm addr=1054 val=8
+DEBUG: Mem[1054] <- 8
+DEBUG: Mem[1886] <- 0
+DEBUG: Mem[1886] <- 0
+DEBUG: Push val=0 from addr=958 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1118 val=0
+DEBUG: Mem[1118] <- 0
+DEBUG: Mem[1918] <- 8
+DEBUG: Mem[1918] <- 8
+DEBUG: Push val=8 from addr=1086 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1150 val=0
+DEBUG: Mem[1150] <- 0
+DEBUG: Block 13 Entry. SP=1950, Top=8, Next=0
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=0 into addr=894
+DEBUG: Mem[894] <- 0
+DEBUG: Mem[30] <- 1886
+DEBUG: SetImm addr=1470 val=1
+DEBUG: Mem[1470] <- 1
+DEBUG: Mem[1886] <- 8
+DEBUG: Mem[1886] <- 8
+DEBUG: Push val=8 from addr=606 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=1502 val=0
+DEBUG: Mem[1502] <- 0
+DEBUG: SetImm addr=1534 val=6
+DEBUG: Mem[1534] <- 6
+DEBUG: SubZ 0 - 1 = 0 -> Mem[1566]
+DEBUG: Mem[1566] <- 0
+DEBUG: Block 11 Entry. SP=1918, Top=8, Next=1
+DEBUG: Mem[1918] <- 0
+DEBUG: Mem[1918] <- 0
+DEBUG: Push val=0 from addr=894 at SP=1918
+DEBUG: Mem[30] <- 1950
+DEBUG: SetImm addr=1182 val=0
+DEBUG: Mem[1182] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1950, Top=0, Next=8
+DEBUG: Block 5 Entry. SP=1950, Top=0, Next=8
+DEBUG: Pop val=0 into addr=574
+DEBUG: Mem[574] <- 0
+DEBUG: Mem[30] <- 1918
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1886
+DEBUG: Mem[1886] <- 0
+DEBUG: Mem[1886] <- 0
+DEBUG: Push val=0 from addr=574 at SP=1886
+DEBUG: Mem[30] <- 1918
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=1918, Top=0, Next=1
+DEBUG: Block 7 Entry. SP=1918, Top=0, Next=1
+DEBUG: Pop val=0 into addr=670
+DEBUG: Mem[670] <- 0
+DEBUG: Mem[30] <- 1886
+DEBUG: Pop val=1 into addr=702
+DEBUG: Mem[702] <- 1
+DEBUG: Mem[30] <- 1854
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1822
+DEBUG: Add 1 + 0 = 1 -> Mem[798]
+DEBUG: Mem[798] <- 1
+DEBUG: Mem[1822] <- 1
+DEBUG: Mem[1822] <- 1
+DEBUG: Push val=1 from addr=798 at SP=1822
+DEBUG: Mem[30] <- 1854
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1854, Top=1, Next=8
+DEBUG: Block 5 Entry. SP=1854, Top=1, Next=8
+DEBUG: Pop val=1 into addr=574
+DEBUG: Mem[574] <- 1
+DEBUG: Mem[30] <- 1822
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1790
+DEBUG: Mem[1790] <- 1
+DEBUG: Mem[1790] <- 1
+DEBUG: Push val=1 from addr=574 at SP=1790
+DEBUG: Mem[30] <- 1822
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=1822, Top=1, Next=2
+DEBUG: Block 7 Entry. SP=1822, Top=1, Next=2
+DEBUG: Pop val=1 into addr=670
+DEBUG: Mem[670] <- 1
+DEBUG: Mem[30] <- 1790
+DEBUG: Pop val=2 into addr=702
+DEBUG: Mem[702] <- 2
+DEBUG: Mem[30] <- 1758
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1726
+DEBUG: Add 2 + 1 = 3 -> Mem[798]
+DEBUG: Mem[798] <- 3
+DEBUG: Mem[1726] <- 3
+DEBUG: Mem[1726] <- 3
+DEBUG: Push val=3 from addr=798 at SP=1726
+DEBUG: Mem[30] <- 1758
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1758, Top=3, Next=8
+DEBUG: Block 5 Entry. SP=1758, Top=3, Next=8
+DEBUG: Pop val=3 into addr=574
+DEBUG: Mem[574] <- 3
+DEBUG: Mem[30] <- 1726
+DEBUG: Pop val=8 into addr=606
+DEBUG: Mem[606] <- 8
+DEBUG: Mem[30] <- 1694
+DEBUG: Mem[1694] <- 3
+DEBUG: Mem[1694] <- 3
+DEBUG: Push val=3 from addr=574 at SP=1694
+DEBUG: Mem[30] <- 1726
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=8
+DEBUG: Block 8 Entry. SP=1726, Top=3, Next=5
+DEBUG: Block 7 Entry. SP=1726, Top=3, Next=5
+DEBUG: Pop val=3 into addr=670
+DEBUG: Mem[670] <- 3
+DEBUG: Mem[30] <- 1694
+DEBUG: Pop val=5 into addr=702
+DEBUG: Mem[702] <- 5
+DEBUG: Mem[30] <- 1662
+DEBUG: Pop val=6 into addr=734
+DEBUG: Mem[734] <- 6
+DEBUG: Mem[30] <- 1630
+DEBUG: Add 5 + 3 = 8 -> Mem[798]
+DEBUG: Mem[798] <- 8
+DEBUG: Mem[1630] <- 8
+DEBUG: Mem[1630] <- 8
+DEBUG: Push val=8 from addr=798 at SP=1630
+DEBUG: Mem[30] <- 1662
+DEBUG: SetImm addr=830 val=0
+DEBUG: Mem[830] <- 0
+DEBUG: JumpVar addr=734 target=6
+DEBUG: Block 6 Entry. SP=1662, Top=8, Next=4
+DEBUG: Block 5 Entry. SP=1662, Top=8, Next=4
+DEBUG: Pop val=8 into addr=574
+DEBUG: Mem[574] <- 8
+DEBUG: Mem[30] <- 1630
+DEBUG: Pop val=4 into addr=606
+DEBUG: Mem[606] <- 4
+DEBUG: Mem[30] <- 1598
+DEBUG: Mem[1598] <- 8
+DEBUG: Mem[1598] <- 8
+DEBUG: Push val=8 from addr=574 at SP=1598
+DEBUG: Mem[30] <- 1630
+DEBUG: SetImm addr=638 val=0
+DEBUG: Mem[638] <- 0
+DEBUG: JumpVar addr=606 target=4
+DEBUG: Block 4 Entry. SP=1630, Top=8, Next=0
+DEBUG: Block 3 Entry. SP=1630, Top=8, Next=0
+DEBUG: Pop val=8 into addr=222
+DEBUG: Mem[222] <- 8
+DEBUG: Mem[30] <- 1598
+DEBUG: SetImm addr=286 val=2
+DEBUG: Mem[286] <- 2
+DEBUG: Mem[1598] <- 8
+DEBUG: Mem[1598] <- 8
+DEBUG: Push val=8 from addr=254 at SP=1598
+DEBUG: Mem[30] <- 1630
+DEBUG: SetImm addr=350 val=0
+DEBUG: Mem[350] <- 0
+DEBUG: Mem[1630] <- 2
+DEBUG: Mem[1630] <- 2
+DEBUG: Push val=2 from addr=318 at SP=1630
+DEBUG: Mem[30] <- 1662
+DEBUG: SetImm addr=382 val=0
+DEBUG: Mem[382] <- 0
+DEBUG: CallExternal print_int: Val=8 K_Ptr=2 K_Label=-536870912
+RESULT: 8
+DEBUG: Mem[1598] <- 0
+DEBUG: Mem[30] <- 1630
+Simulation Error: PC out of bounds: 18446744073172680704

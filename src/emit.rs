@@ -16,7 +16,6 @@ pub fn f(prog: &Prog) -> String {
     // heap: [hp_ptr][hp_regs...(128)][heap]
     // heap(with 33 bit) will grow upper
 
-
     // Metadata for Debugger (Ignored by BF as comments)
     // Format: DEBUG_METADATA{{REG_START:{} BUFFER_START:{} VAR_START:{} STACK_START:{}}}
     // Ensure no BF command chars in this string.
@@ -503,7 +502,7 @@ pub fn f(prog: &Prog) -> String {
                 }
                 Operation::Load(idx, src) => {
                     panic!("Load operations should be optimized away!");
-                    
+
                     // copy(
                     //     &mut bf_code,
                     //     &mut current_ptr,

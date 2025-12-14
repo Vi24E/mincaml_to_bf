@@ -25,6 +25,7 @@ pub fn compile_to_virtual(code: &str) -> Result<(Prog, Layout), String> {
     let alpha_norm = alpha::f(&k_norm);
     let closure_prog = closure::f(&alpha_norm);
     let cps_prog = cps::f(&closure_prog);
+    println!("DEBUG: CPS Prog:\n{}", cps_prog);
     let blocked_prog = blocked::f(&cps_prog);
     let intermediate_prog = intermediate::f(&blocked_prog, &closure_prog);
     eprintln!("DEBUG: Intermediate Prog:\n{}", intermediate_prog);

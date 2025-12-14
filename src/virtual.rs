@@ -152,6 +152,9 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
             // Heap should be far away. stack_start + 100000 creates 3MB gap approximately.
             let heap_start = (stack_start + 100000) as i32;
             ops.push(Operation::SetImm(hp_addr, heap_start));
+
+            // Initialize SP
+            ops.push(Operation::SetImm(sp_addr as u32, stack_start as i32));
         }
 
         // The last variable slot is reserved for comparison temp

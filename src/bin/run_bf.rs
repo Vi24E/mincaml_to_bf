@@ -54,7 +54,17 @@ fn main() {
     while pc < len {
         match code_chars[pc] {
             '>' => ptr += 1,
-            '<' => ptr -= 1,
+            '<' => {
+                if ptr == 0 {
+                    eprintln!("Underflow at PC: {}", pc);
+                    // Print nearby code
+                    let start = if pc > 20 { pc - 20 } else { 0 };
+                    let end = if pc + 20 < len { pc + 20 } else { len };
+                    eprintln!("Code: {:?}", &code_chars[start..end]);
+                    panic!("Underflow");
+                }
+                ptr -= 1;
+            }
             '+' => tape[ptr] = tape[ptr].wrapping_add(1),
             '-' => tape[ptr] = tape[ptr].wrapping_sub(1),
             '.' => {
