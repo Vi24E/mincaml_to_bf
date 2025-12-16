@@ -119,14 +119,7 @@ impl Simulator {
                     self.pc = *l2 as usize;
                 }
             }
-            Operation::JumpIfLE(addr, l1, l2) => {
-                let val = self.read_int(*addr as usize);
-                if val <= 0 {
-                    self.pc = *l1 as usize;
-                } else {
-                    self.pc = *l2 as usize;
-                }
-            }
+
             Operation::Jump(target) => {
                 self.pc = *target as usize;
             }
@@ -169,13 +162,7 @@ impl Simulator {
                     // eprintln!("Warning: Unknown external call {}", name);
                 }
             }
-            Operation::InputByte(_addr) => {
-                // Not supported for now
-            }
-            Operation::OutputByte(addr) => {
-                let val = self.memory[*addr as usize];
-                print!("{}", val as u8 as char);
-            }
+
             Operation::Push(src) => {
                 let sp_addr = prog.sp_addr;
                 let sp = self.read_int(sp_addr); // Read current SP

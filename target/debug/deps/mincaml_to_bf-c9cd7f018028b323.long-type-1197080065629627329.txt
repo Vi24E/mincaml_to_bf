@@ -1,1 +1,0 @@
-<&Vec<String> as IntoIterator>::Item == String

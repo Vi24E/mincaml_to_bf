@@ -466,22 +466,6 @@ pub fn f(prog: &Prog) -> String {
                     move_ptr(&mut bf_code, &mut current_ptr, running_flag);
                     bf_code.push_str("[-]");
                 }
-                Operation::InputByte(addr) => {
-                    bf_code.push_str(
-                        &(format!("\n# InputByte addr:{} Expected: {}\n", addr, current_ptr)
-                            .to_string()),
-                    );
-                    move_ptr(&mut bf_code, &mut current_ptr, *addr);
-                    bf_code.push(',');
-                }
-                Operation::OutputByte(addr) => {
-                    bf_code.push_str(
-                        &(format!("\n# OutputByte addr:{} Expected: {}\n", addr, current_ptr)
-                            .to_string()),
-                    );
-                    move_ptr(&mut bf_code, &mut current_ptr, *addr);
-                    bf_code.push('.');
-                }
             }
         }
 

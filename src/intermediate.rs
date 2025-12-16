@@ -31,16 +31,15 @@ pub enum Atom {
     FMul(id::T, id::T),
     FDiv(id::T, id::T),
     Var(id::T),
-    SetArgs(Vec<id::T>),
-    GetStack(usize),         
+    GetStack(usize),
     Tuple(Vec<id::T>),
     Get(id::T, id::T),
     Put(id::T, id::T, id::T),
     ExtArray(id::L),
-    LoadLabel(id::L),     
+    LoadLabel(id::L),
     Push(id::T),
     Pop,
-    GetSp,
+
     CallDir(id::L, Vec<id::T>),
 }
 
@@ -51,15 +50,15 @@ pub enum Term {
     IfLE(id::T, id::T, id::L, id::L),
     Let((id::T, Type), Atom, Box<Term>),
     LetTuple(Vec<(id::T, Type)>, Atom, Box<Term>),
-    Jump(id::L),             
-    JumpVar(id::T),          
-    CallExternal(id::L),     
-    Ret(id::T),          
+    Jump(id::L),
+    JumpVar(id::T),
+    CallExternal(id::L),
+    Ret(id::T),
 }
 
 struct Converter {
     blocks: Vec<Block>,
-    current_func_args_len: usize,
+    // current_func_args_len: usize, // Unused
     known_labels: HashMap<id::T, id::L>,
 }
 
@@ -67,7 +66,7 @@ impl Converter {
     fn new(_func_arg_counts: HashMap<String, usize>) -> Self {
         Converter {
             blocks: Vec::new(),
-            current_func_args_len: 0,
+            // current_func_args_len: 0,
             known_labels: HashMap::new(),
         }
     }
@@ -99,12 +98,7 @@ impl Converter {
             BlockedTerm::FMul(x, y) => self.bind_atom(Atom::FMul(x.clone(), y.clone()), dest, next),
             BlockedTerm::FDiv(x, y) => self.bind_atom(Atom::FDiv(x.clone(), y.clone()), dest, next),
             BlockedTerm::Var(x) => self.bind_atom(Atom::Var(x.clone()), dest, next),
-            BlockedTerm::SetArgs(xs) => self.bind_atom(Atom::SetArgs(xs.clone()), dest, next),
-            BlockedTerm::GetArg(i) => self.bind_atom(Atom::GetStack(*i), dest, next),
-            BlockedTerm::GetEnv(i) => {
-                let new_idx = self.current_func_args_len + i;
-                self.bind_atom(Atom::GetStack(new_idx), dest, next)
-            }
+
             BlockedTerm::Tuple(xs) => self.bind_atom(Atom::Tuple(xs.clone()), dest, next),
             BlockedTerm::Get(x, y) => self.bind_atom(Atom::Get(x.clone(), y.clone()), dest, next),
             BlockedTerm::Put(x, y, z) => {
@@ -119,13 +113,11 @@ impl Converter {
                 }
                 self.bind_atom(Atom::Pop, dest, next)
             }
-            BlockedTerm::GetSp(_x) => self.bind_atom(Atom::GetSp, dest, next),
+
             BlockedTerm::CallDir(l, args) => {
                 self.bind_atom(Atom::CallDir(l.clone(), args.clone()), dest, next)
             }
-            BlockedTerm::TailCallCls(x) => {
-                Term::JumpVar(x.clone())
-            }
+            BlockedTerm::TailCallCls(x) => Term::JumpVar(x.clone()),
             BlockedTerm::TailCallBlock(l) => {
                 if l == "print_int" || l == "min_caml_print_int" {
                     Term::CallExternal(l.clone())
@@ -160,31 +152,25 @@ impl Converter {
                     Term::IfLE(x, y, c1, c2)
                 })
             }
-            BlockedTerm::Let((x, t), e1, e2) => {
-                match &**e1 {
-                    BlockedTerm::Let((y, ty), y_val, y_body) => {
-                        let rest =
-                            BlockedTerm::Let((x.clone(), t.clone()), y_body.clone(), e2.clone());
-                        let new_term = BlockedTerm::Let(
-                            (y.clone(), ty.clone()),
-                            y_val.clone(),
-                            Box::new(rest),
-                        );
-                        self.convert_term(&new_term, dest, next)
-                    }
-                    _ => {
-                        if let Some(atom) = self.as_atom(e1) {
-                            if let Atom::LoadLabel(ref l) = atom {
-                                self.known_labels.insert(x.clone(), l.clone());
-                            }
-                            let term2 = self.convert_term(e2, dest, next);
-                            Term::Let((x.clone(), t.clone()), atom, Box::new(term2))
-                        } else {
-                            panic!("Let e1 must be Atom in blocked IR, got: {:?}", e1);
+            BlockedTerm::Let((x, t), e1, e2) => match &**e1 {
+                BlockedTerm::Let((y, ty), y_val, y_body) => {
+                    let rest = BlockedTerm::Let((x.clone(), t.clone()), y_body.clone(), e2.clone());
+                    let new_term =
+                        BlockedTerm::Let((y.clone(), ty.clone()), y_val.clone(), Box::new(rest));
+                    self.convert_term(&new_term, dest, next)
+                }
+                _ => {
+                    if let Some(atom) = self.as_atom(e1) {
+                        if let Atom::LoadLabel(ref l) = atom {
+                            self.known_labels.insert(x.clone(), l.clone());
                         }
+                        let term2 = self.convert_term(e2, dest, next);
+                        Term::Let((x.clone(), t.clone()), atom, Box::new(term2))
+                    } else {
+                        panic!("Let e1 must be Atom in blocked IR, got: {:?}", e1);
                     }
                 }
-            }
+            },
             BlockedTerm::LetTuple(xts, y, e) => {
                 let term2 = self.convert_term(e, dest, next);
                 Term::LetTuple(xts.clone(), Atom::Var(y.clone()), Box::new(term2))
@@ -214,7 +200,8 @@ impl Converter {
         next: Option<id::L>,
         ctor: F,
     ) -> Term
-    where F: FnOnce(id::T, id::T, id::L, id::L) -> Term,
+    where
+        F: FnOnce(id::T, id::T, id::L, id::L) -> Term,
     {
         let l_then = self.new_block_id();
         let l_else = self.new_block_id();
@@ -246,11 +233,10 @@ impl Converter {
             BlockedTerm::Put(x, y, z) => Some(Atom::Put(x.clone(), y.clone(), z.clone())),
             BlockedTerm::ExtArray(l) => Some(Atom::ExtArray(l.clone())),
             BlockedTerm::LoadLabel(l) => Some(Atom::LoadLabel(l.clone())),
-            BlockedTerm::SetArgs(xs) => Some(Atom::SetArgs(xs.clone())),
-            BlockedTerm::GetArg(i) => Some(Atom::GetStack(*i)),
+
             BlockedTerm::Push(x) => Some(Atom::Push(x.clone())),
             BlockedTerm::Pop(_) => Some(Atom::Pop),
-            BlockedTerm::GetSp(_) => Some(Atom::GetSp),
+
             BlockedTerm::Tuple(xs) => Some(Atom::Tuple(xs.clone())),
             BlockedTerm::CallDir(l, args) => Some(Atom::CallDir(l.clone(), args.clone())),
             _ => None,
@@ -263,7 +249,7 @@ pub fn f(prog: &BlockedProg, _closure_prog: &ClosureProg) -> Prog {
     for (name, args) in &prog.functions {
         func_arg_counts.insert(name.clone(), args.len());
     }
-    func_arg_counts.insert("main".to_string(), 0); 
+    func_arg_counts.insert("main".to_string(), 0);
     let mut converter = Converter::new(func_arg_counts.clone());
 
     for block in &prog.blocks {
@@ -285,7 +271,7 @@ pub fn f(prog: &BlockedProg, _closure_prog: &ClosureProg) -> Prog {
         &prog.functions,
         &entry_label,
     );
-                
+
     Prog {
         blocks: converter.blocks,
         entry: entry_label,
@@ -299,7 +285,8 @@ pub struct Layout {
     pub var_map: HashMap<id::T, usize>,
     pub block_count: usize,
     pub var_count: usize,
-    pub frame_sizes: HashMap<String, usize>, }
+    pub frame_sizes: HashMap<String, usize>,
+}
 
 fn compute_layout(
     blocks: &Vec<Block>,
@@ -321,7 +308,7 @@ fn compute_layout(
             block_count += 1;
         }
     }
-  
+
     let mut current_func_name = "main".to_string();
     let mut current_var_count = 0;
 
@@ -348,7 +335,7 @@ fn compute_layout(
         collect_vars(&block.term, &mut var_map, &mut current_var_count);
     }
     frame_sizes.insert(current_func_name, current_var_count);
-    let var_count = current_var_count + 1; 
+    let var_count = current_var_count + 1;
     Layout {
         block_map,
         var_map,
@@ -414,7 +401,7 @@ impl fmt::Display for Atom {
             Atom::FDiv(x, y) => write!(f, "{} /. {}", x, y),
             Atom::Var(x) => write!(f, "{}", x),
             Atom::GetStack(i) => write!(f, "GetStack({})", i),
-            Atom::SetArgs(xs) => write!(f, "SetArgs({:?})", xs),
+
             Atom::Tuple(xs) => write!(f, "({:?})", xs),
             Atom::Get(x, y) => write!(f, "{}[{}]", x, y),
             Atom::Put(x, y, z) => write!(f, "{}[{}] = {}", x, y, z),
@@ -422,7 +409,7 @@ impl fmt::Display for Atom {
             Atom::LoadLabel(l) => write!(f, "LoadLabel({})", l),
             Atom::Push(x) => write!(f, "Push({})", x),
             Atom::Pop => write!(f, "Pop"),
-            Atom::GetSp => write!(f, "GetSp"),
+
             Atom::CallDir(l, args) => {
                 let args_s = args
                     .iter()

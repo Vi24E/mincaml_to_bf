@@ -30,12 +30,10 @@ pub enum Term {
     TailCallBlock(id::L),
     TailCallDynamic(id::T), // Call entry point stored in variable
     LoadLabel(id::L),       // Load label address into variable
-    SetArgs(Vec<id::T>),    // Legacy: Will be removed or mapped to Push loops
-    GetArg(usize),          // Legacy: Will be removed or mapped to Pop
-    GetEnv(usize),          // Legacy
+
     Push(id::T),
     Pop(id::T),
-    GetSp(id::T), // dest = SP
+
     Tuple(Vec<id::T>),
     LetTuple(Vec<(id::T, Type)>, id::T, Box<Term>),
     Get(id::T, id::T),
@@ -382,15 +380,10 @@ impl fmt::Display for Term {
             Term::TailCallBlock(l) => write!(f, "TailCallBlock({})", l),
             Term::TailCallDynamic(x) => write!(f, "TailCallDynamic({})", x),
             Term::LoadLabel(l) => write!(f, "LoadLabel({})", l),
-            Term::SetArgs(xs) => {
-                let args_str = xs.join(", ");
-                write!(f, "SetArgs({})", args_str)
-            }
-            Term::GetArg(i) => write!(f, "GetArg({})", i),
-            Term::GetEnv(i) => write!(f, "GetEnv({})", i),
+
             Term::Push(x) => write!(f, "Push({})", x),
             Term::Pop(x) => write!(f, "Pop({})", x),
-            Term::GetSp(x) => write!(f, "GetSp({})", x),
+
             Term::Tuple(xs) => {
                 let elems_str = xs
                     .iter()

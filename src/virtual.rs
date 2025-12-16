@@ -8,13 +8,12 @@ pub enum Operation {
     Sub(u32, u32, u32),
     SubZ(u32, u32, u32),
     JumpIfZero(u32, u32, u32),
-    JumpIfLE(u32, u32, u32),
+
     Jump(u32),
     JumpVar(u32),
     MoveData(u32, u32, usize),
     CallExternal(String),
-    InputByte(u32),
-    OutputByte(u32),
+
     Push(u32),
     Pop(u32),
     Halt,
@@ -204,9 +203,20 @@ fn convert_term(
                 ops.push(Operation::Halt);
             } else if let Some(target_idx) = block_map.get(l) {
                 ops.push(Operation::Jump(*target_idx as u32));
-            } else if let Some(offset) = var_map.get(l) {
-                let addr = (var_start + offset * 32) as u32;
-                ops.push(Operation::OutputByte(addr));
+            } else if let Some(_offset) = var_map.get(l) {
+                // Legacy: Jumping to a variable used to output a byte, but this is removed.
+                // Assuming this path is reachable for dynamic jumps, we should treat it as JumpVar or error?
+                // Given the original code: it was `OutputByte(addr)`.
+                // The user requested removing OutputByte.
+                // "Jump(l)" where l is a variable -> JumpVar(l) logic seems better if supported,
+                // but `convert_term` has a separate `JumpVar` variant for that.
+                // If `l` is in `var_map` here, it means `Term::Jump` was called with a variable name.
+                // In properly blocked IR, this should be `Term::JumpVar`.
+                // We will panic for now as this seems like malformed IR or legacy debug behavior.
+                panic!(
+                    "Jump to variable '{}' via Term::Jump is legacy behavior. Use Term::JumpVar.",
+                    l
+                );
             } else {
                 ops.push(Operation::CallExternal(l.clone()));
             }
@@ -283,7 +293,7 @@ fn convert_atom(
     reg_start: usize,
     var_start: usize,
     stack_start: usize,
-    sp_addr: usize,
+    _sp_addr: usize,
     constants: &HashMap<id::T, ConstVal>,
 ) {
     match atom {
@@ -319,20 +329,7 @@ fn convert_atom(
             let src_addr = (stack_start + i * 32) as u32;
             ops.push(Operation::MoveData(dest_addr, src_addr, 32));
         }
-        Atom::SetArgs(xs) => {
-            for (i, x) in xs.iter().enumerate() {
-                let dst_addr = (stack_start + i * 32) as u32;
-                if let Some(offset) = var_map.get(x) {
-                    let src_addr = (var_start + offset * 32) as u32;
-                    ops.push(Operation::MoveData(dst_addr, src_addr, 32));
-                } else if let Some(block_idx) = block_map.get(x) {
-                    ops.push(Operation::SetImm(dst_addr, (*block_idx as i32) + 1));
-                } else {
-                    panic!("SetArgs: Variable or Label not found: {}", x);
-                }
-            }
-            ops.push(Operation::SetImm(dest_addr, 0));
-        }
+
         Atom::LoadLabel(l) => {
             if let Some(idx) = block_map.get(l) {
                 ops.push(Operation::SetImm(dest_addr, (*idx as i32) + 1));
@@ -414,9 +411,7 @@ fn convert_atom(
         Atom::Pop => {
             ops.push(Operation::Pop(dest_addr));
         }
-        Atom::GetSp => {
-            ops.push(Operation::MoveData(dest_addr, sp_addr as u32, 32));
-        }
+
         Atom::CallDir(l, args) => {
             for (i, x) in args.iter().enumerate() {
                 let dst_stack_addr = (stack_start + i * 32) as u32;
@@ -448,17 +443,14 @@ impl fmt::Display for Operation {
             Operation::JumpIfZero(cond, l1, l2) => {
                 write!(f, "JumpIfZero({}, {}, {})", cond, l1, l2)
             }
-            Operation::JumpIfLE(cond, l1, l2) => {
-                write!(f, "JumpIfLE({}, {}, {})", cond, l1, l2)
-            }
+
             Operation::Jump(target) => write!(f, "Jump({})", target),
             Operation::JumpVar(src) => write!(f, "JumpVar({})", src),
             Operation::MoveData(dest, src, size) => {
                 write!(f, "MoveData({}, {}, {})", dest, src, size)
             }
             Operation::CallExternal(name) => write!(f, "CallExternal({})", name),
-            Operation::InputByte(addr) => write!(f, "InputByte({})", addr),
-            Operation::OutputByte(addr) => write!(f, "OutputByte({})", addr),
+
             Operation::Push(src) => write!(f, "Push({})", src),
             Operation::Pop(dest) => write!(f, "Pop({})", dest),
             Operation::Halt => write!(f, "Halt"),
