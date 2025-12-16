@@ -361,7 +361,25 @@ impl Converter {
                 // Exec: Push K_Args -> Push K_Label -> Push Args -> Jump
 
                 // 1. Jump f
-                let mut res = Term::TailCallDynamic(f.clone());
+                // Check if f is a known label (Optimization for Beta Reduction)
+                let is_external = f.starts_with("min_caml_")
+                    || f == "print_int"
+                    || f == "print_newline"
+                    || f == "truncate"
+                    || f == "sin"
+                    || f == "cos"
+                    || f == "sqrt"
+                    || f == "abs_float"
+                    || f == "int_of_float"
+                    || f == "float_of_int"
+                    || f == "floor"
+                    || f == "halt";
+
+                let mut res = if self.closure_fundefs.contains_key(f) || is_external {
+                    Term::TailCallBlock(f.clone())
+                } else {
+                    Term::TailCallDynamic(f.clone())
+                };
 
                 // 2. Wrap Push Args (Forward loop -> Top=Arg1)
                 for arg in args {

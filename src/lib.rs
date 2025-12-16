@@ -34,6 +34,7 @@ pub fn compile_to_virtual(code: &str) -> Result<(Prog, Layout), String> {
     eprintln!("DEBUG: CPS Prog:\n{}", cps_prog);
     eprintln!("DEBUG: Blocking...");
     let blocked_prog = blocked::f(&cps_prog, &closure_prog);
+    eprintln!("DEBUG: Blocked Prog:\n{}", blocked_prog);    
     eprintln!("DEBUG: Intermediate Converting...");
     let intermediate_prog = intermediate::f(&blocked_prog, &closure_prog);
     // eprintln!("DEBUG: Intermediate Prog:\n{}", intermediate_prog);
