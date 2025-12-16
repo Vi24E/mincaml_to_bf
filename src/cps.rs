@@ -323,14 +323,32 @@ pub fn f(prog: &ClosureProg) -> Prog {
         });
     }
 
-    let main_cps = g(
+    // 2. Create `min_caml_start` function
+    // fun min_caml_start() = body... -> halt
+    let start_name = "min_caml_start".to_string();
+
+    // Original CPS generation: g(body, |x| AppDir("halt", [x]))
+    // This bakes "halt" into the tail of the body.
+    let main_cps_body = g(
         prog.body.clone(),
         Box::new(|x| Term::AppDir("halt".to_string(), vec![x])),
     );
 
+    // min_caml_start takes NO arguments (no continuation passed, no result passed).
+    // It is a self-contained routine.
+    let start_fundef = Fundef {
+        name: (start_name.clone(), Type::Fun(vec![], Box::new(Type::Unit))),
+        args: vec![],
+        body: Box::new(main_cps_body),
+    };
+    cps_fundefs.push(start_fundef);
+
+    // 3. Entry Point: Call min_caml_start()
+    let entry_term = Term::AppDir(start_name.clone(), vec![]);
+
     Prog {
         fundefs: cps_fundefs,
-        body: main_cps,
+        body: entry_term,
     }
 }
 
