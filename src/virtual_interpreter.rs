@@ -51,8 +51,8 @@ impl Simulator {
             let sp_addr = prog.sp_addr;
             let current_sp = self.read_int(sp_addr);
             if true {
-                let sp_val0 = self.read_int((current_sp as usize) - 32);
-                let sp_val1 = self.read_int((current_sp as usize) - 64);
+                let _sp_val0 = self.read_int((current_sp as usize) - 32);
+                let _sp_val1 = self.read_int((current_sp as usize) - 64);
                 // eprintln!(
                 //     "DEBUG: Block {} Entry. SP={}, Top={}, Next={}",
                 //     self.pc, current_sp, sp_val0, sp_val1
@@ -178,40 +178,20 @@ impl Simulator {
                     self.running = false;
                     // eprintln!("DEBUG: Halt called"); // Optional debug
                 } else if name == "print_int" || name == "min_caml_print_int" {
-                    // Stack Layout: [K_Env...] [K_Label] [Val]
-                    // Top (SP-32): Val
-                    // Below (SP-64): K_Label
+                    // Direct Call Convention (CallDir):
+                    // Args are at stack_start (SetArgs).
+                    // Wait, SetArgs puts args at `stack_start + i*32`.
+                    // This creates a fresh frame at `stack_start`.
+                    // `virtual.rs` SetArgs logic uses `prog.stack_start`.
 
-                    let sp_addr = prog.sp_addr;
-                    let mut sp = self.read_int(sp_addr) as usize;
+                    let arg_addr = prog.stack_start;
+                    let val = self.read_int(arg_addr);
 
-                    // Peek values
-                    let val = self.read_int(sp - 32);
-                    let k_label = self.read_int(sp - 64);
-
-                    // eprintln!(
-                    //     "DEBUG: CallExternal print_int: Val={} K_Label={}",
-                    //     val, k_label
-                    // );
-
-                    // Print
                     println!("RESULT: {}", val);
                     self.output
                         .extend_from_slice(format!("{}\n", val).as_bytes());
 
-                    // Pop arguments (Val, K_Label) -> 64 bytes
-                    sp -= 64;
-
-                    // Call Continuation: K(Unit)
-                    // Push Unit (Result 0)
-                    self.write_int(sp, 0); // Write at current SP
-                    sp += 32; // Increment SP
-
-                    // Update SP register
-                    self.write_int(sp_addr, sp as i32);
-
-                    // Jump to K (Label)
-                    self.pc = k_label as usize;
+                    // No Jump. Just Return.
                 } else {
                     // eprintln!("Warning: Unknown external call {}", name);
                 }

@@ -55,12 +55,14 @@ pub enum Term {
     Put(id::T, id::T, id::T),
     ExtArray(id::L),
     Goto(id::L),
+    CallDir(id::L, Vec<id::T>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Prog {
     pub blocks: Vec<Block>,
     pub entry: id::L,
+    pub functions: Vec<(String, Vec<id::T>)>,
 }
 
 struct Converter {
@@ -190,7 +192,7 @@ impl Converter {
         }
 
         // 1. Pop CodePtr (MOVED HERE - Outer Wrap -> Exec First)
-        if let Some(fundef_in_map) = self.closure_fundefs.get(&fundef.name.0) {
+        if let Some(_fundef_in_map) = self.closure_fundefs.get(&fundef.name.0) {
             // eprintln!(
             //     "DEBUG: convert_fundef checking closure: {}",
             //     fundef_in_map.name.0
@@ -261,7 +263,6 @@ impl Converter {
 
     fn convert_term(&mut self, term: &CpsTerm) -> Term {
         match term {
-            // CpsTerm has only Let, LetTuple, IfEq, IfLE, LetRec, AppCls, AppDir.
             CpsTerm::Let((x, t), atom, e2) => {
                 let val_term = match atom {
                     CpsAtom::Unit => Term::Unit,
@@ -287,17 +288,13 @@ impl Converter {
                         self.label_env.insert(x.clone(), l.clone());
                         Term::LoadLabel(l.clone())
                     }
+                    CpsAtom::CallDir(l, args) => Term::CallDir(l.clone(), args.clone()),
                 };
 
                 let added_local = self.locals.insert(x.clone());
-
-                // Track Local for Cleanup
                 self.locals_stack.push(x.clone());
-
                 let body_term = self.convert_term(e2);
-
                 self.locals_stack.pop();
-
                 if added_local {
                     self.locals.remove(x);
                 }
@@ -309,33 +306,24 @@ impl Converter {
                 )
             }
             CpsTerm::LetTuple(xts, y, e) => {
-                // LetTuple binds multiple variables.
-                // All of them become locals.
                 let mut added_locals = Vec::new();
                 for (x, _) in xts {
                     if self.locals.insert(x.clone()) {
                         added_locals.push(x.clone());
                     }
                 }
-
-                // Track Locals for Cleanup
                 let mut stack_count = 0;
                 for (x, _) in xts {
-                    // Only track if valid local (not skipped) - but LetTuple always binds.
                     self.locals_stack.push(x.clone());
                     stack_count += 1;
                 }
-
                 let next = self.convert_term(e);
-
                 for _ in 0..stack_count {
                     self.locals_stack.pop();
                 }
-
                 for x in added_locals {
                     self.locals.remove(&x);
                 }
-
                 Term::LetTuple(xts.clone(), y.clone(), Box::new(next))
             }
             CpsTerm::IfEq(x, y, e1, e2) => {
@@ -354,233 +342,48 @@ impl Converter {
                 self.locals_stack = saved_stack;
                 Term::IfLE(x.clone(), y.clone(), Box::new(t1), Box::new(t2))
             }
-            CpsTerm::LetRec(fundef, e) => {
-                // eprintln!("DEBUG: blocked::LetRec: {}", fundef.name.0);
-                self.convert_fundef(fundef);
-                self.convert_term(e)
-            }
-            CpsTerm::AppCls(f, args) => {
-                // Devirtualization Check
-                let mut refined_f = None;
-                let mut refined_args = args.clone();
-
-                if let Some(tuple_elems) = self.tuple_env.get(f) {
-                    if !tuple_elems.is_empty() {
-                        let code_var = &tuple_elems[0];
-                        if let Some(label) = self.label_env.get(code_var) {
-                            refined_f = Some(label.clone());
-                            // Prepend FVs
-                            for fv in tuple_elems.iter().skip(1).rev() {
-                                refined_args.insert(0, fv.clone());
-                            }
-                        }
-                    }
-                }
-
-                if let Some(l) = refined_f {
-                    let mut res = Term::TailCallBlock(l.clone());
-                    for arg in refined_args.iter().rev() {
-                        res = self.push_val(arg, res);
-                    }
-                    res
+            CpsTerm::App(f, args) => {
+                let mut res = if f == "halt" {
+                    Term::TailCallBlock(f.clone())
+                } else if self.label_env.contains_key(f) {
+                    let l = self.label_env.get(f).unwrap();
+                    Term::TailCallBlock(l.clone())
                 } else {
-                    let mut res = Term::TailCallDynamic(f.clone());
-                    for arg in args.iter().rev() {
-                        res = self.push_val(arg, res);
-                    }
-                    res
-                }
-            }
-            CpsTerm::AppDir(l, args) => {
-                let mut res = Term::TailCallBlock(l.clone());
-                // Stack Expectation: [Cont] [Args] [FVs] [CodePtr] (Top)
-                // Wrap Order (Inner to Outer aka Top to Bottom):
-                // CodePtr -> FVs -> Args -> Cont
-
-                // 1. Wrap CodePtr (Inner - Top) - Only if Closure
-                if self.closure_fundefs.contains_key(l) {
-                    let code_ptr_var = id::gentmp(&Type::Int);
-                    res = Term::Let(
-                        (code_ptr_var.clone(), Type::Int),
-                        Box::new(Term::LoadLabel(l.clone())),
-                        Box::new(Term::Let(
-                            (id::gentmp(&Type::Unit), Type::Unit),
-                            Box::new(Term::Push(code_ptr_var)),
-                            Box::new(res),
-                        )),
-                    );
-                }
-
-                // 2. Wrap FVs (REMOVED - Included in Explicit Args)
-                // AppDir args already includes FVs. Push Explicit Loop handles them.
-                // Exception: If AppDir args DOES NOT include FVs?
-                // MinCaml Convention: Global functions called directly expects FVs to be passed.
-                // So caller must provide them. Usually in `args`.
-                // If `AppDir` call site generated by `k_normal`, FVs are added to Args.
-                // So checking `closure_fundefs` here and pushing is redundant.
-                // if let Some(_) = self.closure_fundefs.get(l) {
-                //     eprintln!(
-                //         "DEBUG: AppDir {} found. CodePtr Pushed. FVs skipped (in args).",
-                //         l
-                //     );
-                // } else {
-                //     eprintln!("DEBUG: AppDir {} NOT found in closure_fundefs", l);
-                // }
-
-                // 3. Split Args/Cont
-                // Stack Expectation: [Cont] [ExplicitArgs] [FVs] [Code] (Top).
-                // Wrap Order (Inner -> Outer): Code -> FVs -> ExplicitArgs -> Cont.
-
-                let total_args = args.len();
-                if total_args > 0 {
-                    let last_idx = total_args - 1;
-                    let cont_arg = &args[last_idx];
-                    let explicit_args = &args[0..last_idx];
-
-                    // 3a. Wrap Explicit Args (Inner) - Rev Loop
-                    // Iter An..A0. Let(An). Let(A0, Let(An)).
-                    // Exec Push A0 -> Push An.
-                    // Stack [A0] [An]. Top An.
-                    for arg in explicit_args.iter().rev() {
-                        res = self.push_val(arg, res);
-                    }
-
-                    // 3b. Wrap Cont (Outer)
-                    res = self.push_val(cont_arg, res);
+                    Term::TailCallDynamic(f.clone())
+                };
+                for arg in args.iter() {
+                    res = self.push_val(arg, res);
                 }
                 res
             }
             CpsTerm::AppCont(f, args, k_label, k_args) => {
-                // Stack Expectation: [ContTuple] [Args] [FVs] [CodePtr] (Top)
-                // AppCont corresponds to a Normal Call in CPS.
-                // We must pack (k_label, k_args) into a tuple and pass it as the LAST argument.
+                // Stack Layout: [Args] (Top) -> K_Label -> [K_Args] (Bottom)
+                // Exec: Push K_Args -> Push K_Label -> Push Args -> Jump
 
-                let mut res = Term::TailCallBlock(f.clone());
+                // 1. Jump f
+                let mut res = Term::TailCallDynamic(f.clone());
 
-                let is_closure = self.closure_fundefs.contains_key(f);
-                if is_closure {
-                    // 1. Wrap CodePtr
-                    let label_var = id::gentmp(&Type::Int);
-                    res = Term::Let(
-                        (label_var.clone(), Type::Int),
-                        Box::new(Term::LoadLabel(f.clone())),
-                        Box::new(Term::Let(
-                            (id::gentmp(&Type::Unit), Type::Unit),
-                            Box::new(Term::Push(label_var)),
-                            Box::new(res),
-                        )),
-                    );
-
-                    // 2. Wrap FVs
-                    if let Some(fundef) = self.closure_fundefs.get(f) {
-                        for (fv_name, _) in fundef.formal_fv.iter().rev() {
-                            res = self.push_val(fv_name, res);
-                        }
-                    }
-                }
-
-                // 3. Wrap Args (Middle) - Rev Loop
-                for arg in args.iter().rev() {
+                // 2. Wrap Push Args (Forward loop -> Top=Arg1)
+                for arg in args {
                     res = self.push_val(arg, res);
                 }
 
-                // 4. Wrap Cont (Outer) AS TUPLE
-                // Create Tuple: (k_label, k_args...)
-                let k_label_var = id::gentmp(&Type::Int);
-                // Load Label
-                let k_tuple_var = id::gentmp(&Type::Tuple(vec![]));
-                let mut k_elems = vec![k_label_var.clone()];
-                k_elems.extend(k_args.clone());
-
-                // Push Tuple Variable
-                res = self.push_val(&k_tuple_var, res);
-
-                // Construct Tuple
+                // 3. Wrap Push K_Label
+                let k_label_val = id::gentmp(&Type::Int);
                 res = Term::Let(
-                    (k_tuple_var.clone(), Type::Tuple(vec![])),
-                    Box::new(Term::Tuple(k_elems)),
-                    Box::new(res),
-                );
-
-                // Load Label
-                res = Term::Let(
-                    (k_label_var.clone(), Type::Int),
+                    (k_label_val.clone(), Type::Int),
                     Box::new(Term::LoadLabel(k_label.clone())),
-                    Box::new(res),
+                    Box::new(Term::Let(
+                        (id::gentmp(&Type::Unit), Type::Unit),
+                        Box::new(Term::Push(k_label_val)),
+                        Box::new(res),
+                    )),
                 );
 
-                res
-            }
-            CpsTerm::AppClsCont(f, args, k_label, k_args) => {
-                // Flattened AppClsCont
-                // Same as AppCont but f is dynamic (closure).
-
-                let mut refined_f = None; // The actual label to jump to
-                let mut refined_code_ptr_var = None; // The variable holding the code pointer
-                let mut fvs = Vec::new();
-
-                if let Some(tuple_elems) = self.tuple_env.get(f) {
-                    if !tuple_elems.is_empty() {
-                        let code_var = &tuple_elems[0];
-                        refined_code_ptr_var = Some(code_var.clone());
-                        if let Some(label) = self.label_env.get(code_var) {
-                            refined_f = Some(label.clone());
-                        }
-                        // FVs
-                        for fv in tuple_elems.iter().skip(1) {
-                            fvs.push(fv.clone());
-                        }
-                    }
+                // 4. Wrap Push K_Args (Forward loop -> Bottom=Arg1)
+                for k_arg in k_args {
+                    res = self.push_val(k_arg, res);
                 }
-
-                let target_label = refined_f.unwrap_or_else(|| f.clone());
-                let mut res = Term::TailCallBlock(target_label.clone());
-
-                // 1. Wrap CodePtr (Inner - Top)
-                if let Some(code_ptr_var) = refined_code_ptr_var {
-                    res = self.push_val(&code_ptr_var, res);
-                } else {
-                    // Fallback for purely dynamic? If we have dynamic dispatcher
-                    // we would push f[0] here. Wait, AppClsCont logic assumed refined.
-                    // If not refined, we might need TailCallDynamic if supported.
-                    // But assuming devirtualization works or we use direct.
-                    // If strictly dynamic, we'd need:
-                    // push f (as environment?) no, push f.0 (code).
-                    // In blocked IR, we rely on devirtualization mostly.
-                }
-
-                // 2. Wrap FVs (Middle) - Rev Loop
-                for fv in fvs.iter().rev() {
-                    res = self.push_val(fv, res);
-                }
-
-                // 3. Wrap Args (Middle) - Rev Loop
-                for arg in args.iter().rev() {
-                    res = self.push_val(arg, res);
-                }
-
-                // 4. Wrap Cont (Outer) AS TUPLE
-                let k_label_var = id::gentmp(&Type::Int);
-                let k_tuple_var = id::gentmp(&Type::Tuple(vec![]));
-                let mut k_elems = vec![k_label_var.clone()];
-                k_elems.extend(k_args.clone());
-
-                // Push Tuple Variable
-                res = self.push_val(&k_tuple_var, res);
-
-                // Construct Tuple
-                res = Term::Let(
-                    (k_tuple_var.clone(), Type::Tuple(vec![])),
-                    Box::new(Term::Tuple(k_elems)),
-                    Box::new(res),
-                );
-
-                // Load Label
-                res = Term::Let(
-                    (k_label_var.clone(), Type::Int),
-                    Box::new(Term::LoadLabel(k_label.clone())),
-                    Box::new(res),
-                );
 
                 res
             }
@@ -621,6 +424,16 @@ pub fn f(prog: &CpsProg, closure_prog: &crate::closure::Prog) -> Prog {
             .map(|(id, term)| Block { id, term })
             .collect(),
         entry: entry_label,
+        functions: prog
+            .fundefs
+            .iter()
+            .map(|f| {
+                (
+                    f.name.0.clone(),
+                    f.args.iter().map(|(x, _)| x.clone()).collect(),
+                )
+            })
+            .collect(),
     }
 }
 
@@ -691,6 +504,14 @@ impl fmt::Display for Term {
             Term::Put(x, y, z) => write!(f, "{}[{}] = {};", x, y, z),
             Term::ExtArray(x) => write!(f, "ExtArray({})", x),
             Term::Goto(l) => write!(f, "Goto {}", l),
+            Term::CallDir(l, args) => {
+                let args_s = args
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "CallDir({}, [{}])", l, args_s)
+            }
         }
     }
 }

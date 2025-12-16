@@ -270,7 +270,11 @@ fn convert_term(
             }
         }
         Term::JumpVar(x) => {
-            let addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
+            let addr = (var_start
+                + var_map
+                    .get(x)
+                    .expect(&format!("JumpVar: Variable {} not found in var_map", x))
+                    * 32) as u32;
             ops.push(Operation::JumpVar(addr));
         }
         Term::CallExternal(l) => {
@@ -497,6 +501,22 @@ fn convert_atom(
         }
         Atom::GetSp => {
             ops.push(Operation::MoveData(dest_addr, sp_addr as u32, 32));
+        }
+        Atom::CallDir(l, args) => {
+            // Direct External Call: Set Args -> Call -> Move Result (0)
+            for (i, x) in args.iter().enumerate() {
+                let dst_stack_addr = (stack_start + i * 32) as u32;
+                if let Some(offset) = var_map.get(x) {
+                    let src_addr = (var_start + offset * 32) as u32;
+                    ops.push(Operation::MoveData(dst_stack_addr, src_addr, 32));
+                } else if let Some(block_idx) = block_map.get(x) {
+                    ops.push(Operation::SetImm(dst_stack_addr, *block_idx as i32));
+                } else {
+                    panic!("CallDir: Variable or Label not found: {}", x);
+                }
+            }
+            ops.push(Operation::CallExternal(l.clone()));
+            ops.push(Operation::SetImm(dest_addr, 0));
         }
     }
 }

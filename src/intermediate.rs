@@ -41,6 +41,7 @@ pub enum Atom {
     Push(id::T),
     Pop,
     GetSp,
+    CallDir(id::L, Vec<id::T>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -145,6 +146,9 @@ impl Converter {
                 self.bind_atom(Atom::Pop, dest, next)
             }
             BlockedTerm::GetSp(_x) => self.bind_atom(Atom::GetSp, dest, next),
+            BlockedTerm::CallDir(l, args) => {
+                self.bind_atom(Atom::CallDir(l.clone(), args.clone()), dest, next)
+            }
 
             // CallCls and CallBlock are removed from blocked::Term
             // TailCallCls and TailCallBlock are the only calls
@@ -293,16 +297,17 @@ impl Converter {
             BlockedTerm::Pop(_) => Some(Atom::Pop), // Pop(dest) maps to Pop atom
             BlockedTerm::GetSp(_) => Some(Atom::GetSp),
             BlockedTerm::Tuple(xs) => Some(Atom::Tuple(xs.clone())),
+            BlockedTerm::CallDir(l, args) => Some(Atom::CallDir(l.clone(), args.clone())),
             _ => None,
         }
     }
 }
 
-pub fn f(prog: &BlockedProg, closure_prog: &ClosureProg) -> Prog {
-    // 1. Build func_arg_counts from closure_prog
+pub fn f(prog: &BlockedProg, _closure_prog: &ClosureProg) -> Prog {
+    // 1. Build func_arg_counts from prog.functions
     let mut func_arg_counts = HashMap::new();
-    for fundef in &closure_prog.fundefs {
-        func_arg_counts.insert(fundef.name.0.clone(), fundef.args.len());
+    for (name, args) in &prog.functions {
+        func_arg_counts.insert(name.clone(), args.len());
     }
     // Main function has 0 args? Or it's not in fundefs.
     // Main is usually entry point, 0 args.
@@ -326,7 +331,7 @@ pub fn f(prog: &BlockedProg, closure_prog: &ClosureProg) -> Prog {
     let layout = compute_layout(
         &converter.blocks,
         &func_arg_counts,
-        closure_prog,
+        &prog.functions,
         &entry_label,
     );
 
@@ -354,7 +359,7 @@ pub struct Layout {
 fn compute_layout(
     blocks: &Vec<Block>,
     func_arg_counts: &HashMap<String, usize>,
-    closure_prog: &ClosureProg,
+    functions: &Vec<(String, Vec<id::T>)>,
     entry_label: &id::L,
 ) -> Layout {
     let mut block_map = HashMap::new();
@@ -383,8 +388,8 @@ fn compute_layout(
 
     // Helper to map args
     let map_args = |func_name: &str, map: &mut HashMap<id::T, usize>, count: &mut usize| {
-        if let Some(fundef) = closure_prog.fundefs.iter().find(|f| f.name.0 == func_name) {
-            for (arg, _) in &fundef.args {
+        if let Some((_, args)) = functions.iter().find(|(name, _)| name == func_name) {
+            for arg in args {
                 if !map.contains_key(arg) {
                     map.insert(arg.clone(), *count);
                     // eprintln!("DEBUG: Mapping Arg {} to {}", arg, *count);
@@ -491,6 +496,14 @@ impl fmt::Display for Atom {
             Atom::Push(x) => write!(f, "Push({})", x),
             Atom::Pop => write!(f, "Pop"),
             Atom::GetSp => write!(f, "GetSp"),
+            Atom::CallDir(l, args) => {
+                let args_s = args
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                write!(f, "CallDir({}, [{}])", l, args_s)
+            }
         }
     }
 }
