@@ -47,6 +47,7 @@ class DebuggerHandler(http.server.SimpleHTTPRequestHandler):
                 'stack_start': DBG_INSTANCE.stack_start,
                 'context': DBG_INSTANCE.get_active_context(),
                 'variables': DBG_INSTANCE.get_variables(),
+                'error': DBG_INSTANCE.last_error,
             }
             
             # If initial load (or requested), send ops

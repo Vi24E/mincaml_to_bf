@@ -175,7 +175,10 @@ impl Converter {
             BlockedTerm::TailCallBlock(l) => {
                 // TailCallBlock(l) -> Jump(l)
                 // Check if external call
+                // Check if external call
                 if l == "print_int" || l == "min_caml_print_int" {
+                    Term::CallExternal(l.clone())
+                } else if l == "halt" {
                     Term::CallExternal(l.clone())
                 } else {
                     Term::Jump(l.clone())

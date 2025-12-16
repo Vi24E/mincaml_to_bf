@@ -106,7 +106,7 @@ def parse_bf(code):
 import re
 
 class Debugger:
-    def __init__(self, code, tape_size=30000):
+    def __init__(self, code, tape_size=300000):
         self.code_str = code
         self.ops = parse_bf(code)
         self.tape = [0] * tape_size
@@ -120,7 +120,9 @@ class Debugger:
         self.reg_start = None
         self.buffer_start = None
         self.var_start = None
+        self.var_start = None
         self.stack_start = None
+        self.last_error = None
         self.parse_metadata()
 
     def parse_metadata(self):
@@ -151,18 +153,32 @@ class Debugger:
             self.tape[self.ptr] = (self.tape[self.ptr] + op.count) % 256
             self.pc += 1
         elif op.char == '-':
-            self.tape[self.ptr] = (self.tape[self.ptr] - op.count) % 256
+            # Strict error check: Value < 0
+            if self.tape[self.ptr] - op.count < 0:
+                self.last_error = f"Runtime Error: Cell Underflow at {self.ptr} (Val {self.tape[self.ptr]} - {op.count})"
+                print(f"{Colors.FAIL}{self.last_error}{Colors.ENDC}")
+                return False
+            self.tape[self.ptr] -= op.count
             self.pc += 1
         elif op.char == 'Z': # Zero Optimization
             self.tape[self.ptr] = 0
             self.pc += 1
         elif op.char == '>':
-            self.tape_len = len(self.tape) # optimize access
-            self.ptr = (self.ptr + op.count) % self.tape_len
+            # Strict error check: Ptr >= Limit
+            self.tape_len = len(self.tape)
+            if self.ptr + op.count >= self.tape_len:
+                self.last_error = f"Runtime Error: Pointer Overflow at {self.ptr} (+{op.count} >= {self.tape_len})"
+                print(f"{Colors.FAIL}{self.last_error}{Colors.ENDC}")
+                return False
+            self.ptr += op.count
             self.pc += 1
         elif op.char == '<':
-            self.tape_len = len(self.tape) 
-            self.ptr = (self.ptr - op.count) % self.tape_len
+            # Strict error check: Ptr < 0
+            if self.ptr - op.count < 0:
+                self.last_error = f"Runtime Error: Pointer Underflow at {self.ptr} (-{op.count} < 0)"
+                print(f"{Colors.FAIL}{self.last_error}{Colors.ENDC}")
+                return False
+            self.ptr -= op.count
             self.pc += 1
         elif op.char == '[':
             if self.tape[self.ptr] == 0:

@@ -466,7 +466,6 @@ pub fn f(prog: &Prog) -> String {
                             &(format!("\n# Halt name:{} Expected: {}\n", name, current_ptr)
                                 .to_string()),
                         );
-                        // Halt: Clear running flag
                         move_ptr(&mut bf_code, &mut current_ptr, running_flag);
                         bf_code.push_str("[-]");
                         // clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
