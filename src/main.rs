@@ -5,12 +5,15 @@ use std::io::{self, Read};
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    let mut sim_mode = false;
+    let mut bf_mode = false;
+    let mut debug_mode = false;
     let mut filename = None;
 
     for arg in args.iter().skip(1) {
-        if arg == "-s" {
-            sim_mode = true;
+        if arg == "-bf" {
+            bf_mode = true;
+        } else if arg == "-debug" {
+            debug_mode = true;
         } else {
             filename = Some(arg);
         }
@@ -24,19 +27,19 @@ fn main() -> io::Result<()> {
         buffer
     };
 
-    if sim_mode {
-        match mincaml_to_bf::compile_to_virtual(&code) {
-            Ok((virtual_prog, _)) => {
-                let mut sim =
-                    mincaml_to_bf::virtual_interpreter::Simulator::new(&virtual_prog, 10000000);
-                if let Err(e) = sim.run(&virtual_prog) {
-                    eprintln!("Simulation Error: {}", e);
-                }
-            }
-            Err(e) => eprintln!("Error: {}", e),
+    if bf_mode {
+        let mut machine = mincaml_to_bf::interpreter::Machine::new(10_000_000);
+        if let Err(e) = machine.run(&code) {
+            eprintln!("Runtime Error: {}", e);
+        }
+        if let Ok(s) = String::from_utf8(machine.output) {
+            print!("{}", s);
+        } else {
+            eprintln!("Error: Output is not valid UTF-8");
         }
     } else {
-        match compile(&code) {
+        // Compile MinCaml to Brainfuck
+        match compile(&code, debug_mode) {
             Ok((bf_code, _, _)) => {
                 println!("{}", bf_code);
             }

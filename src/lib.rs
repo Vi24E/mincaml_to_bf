@@ -1,4 +1,5 @@
 pub mod alpha;
+
 pub mod blocked;
 pub mod closure;
 pub mod cps;
@@ -13,7 +14,6 @@ pub mod syntax;
 pub mod ty;
 pub mod typing;
 pub mod r#virtual;
-pub mod virtual_interpreter;
 
 use intermediate::Layout;
 use r#virtual::Prog;
@@ -31,8 +31,8 @@ pub fn compile_to_virtual(code: &str) -> Result<(Prog, Layout), String> {
     Ok((virtual_prog, intermediate_prog.layout))
 }
 
-pub fn compile(code: &str) -> Result<(String, Prog, Layout), String> {
+pub fn compile(code: &str, debug: bool) -> Result<(String, Prog, Layout), String> {
     let (virtual_prog, layout) = compile_to_virtual(code)?;
-    let bf_code = emit::f(&virtual_prog);
+    let bf_code = emit::f(&virtual_prog, debug);
     Ok((bf_code, virtual_prog, layout))
 }
