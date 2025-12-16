@@ -229,9 +229,9 @@ impl Converter {
     }
 
     fn bind_atom(&self, atom: Atom, dest: Option<(id::T, Type)>, next: Option<id::L>) -> Term {
-        if let Atom::Push(ref x) = atom {
-            eprintln!("DEBUG: bind_atom Push({}) dest={:?}", x, dest);
-        }
+        // if let Atom::Push(ref x) = atom {
+        //     eprintln!("DEBUG: bind_atom Push({}) dest={:?}", x, dest);
+        // }
         match (dest, next) {
             (Some((x, t)), Some(next_l)) => Term::Let((x, t), atom, Box::new(Term::Jump(next_l))),
             (Some(_), None) => panic!("bind_atom: next label is None (Ret removed)"),
@@ -387,7 +387,7 @@ fn compute_layout(
             for (arg, _) in &fundef.args {
                 if !map.contains_key(arg) {
                     map.insert(arg.clone(), *count);
-                    eprintln!("DEBUG: Mapping Arg {} to {}", arg, *count);
+                    // eprintln!("DEBUG: Mapping Arg {} to {}", arg, *count);
                     *count += 1;
                 }
             }

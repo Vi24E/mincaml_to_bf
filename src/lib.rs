@@ -40,10 +40,10 @@ pub fn compile_to_virtual(code: &str) -> Result<(Prog, Layout), String> {
     use std::io::Write;
     std::io::stderr().flush().unwrap();
     let virtual_prog = r#virtual::f(&intermediate_prog);
-    eprintln!(
-        "DEBUG: Virtual Prog generated. Blocks: {}",
-        virtual_prog.blocks.len()
-    );
+    // eprintln!(
+    //     "DEBUG: Virtual Prog generated. Blocks: {}",
+    //     virtual_prog.blocks.len()
+    // );
     Ok((virtual_prog, intermediate_prog.layout))
 }
 

@@ -81,7 +81,7 @@ impl Prog {
 
 // Main entry point for virtual code generation
 pub fn f(prog: &intermediate::Prog) -> Prog {
-    eprintln!("DEBUG: Starting virtual::f");
+    // eprintln!("DEBUG: Starting virtual::f");
     use std::io::Write;
     std::io::stderr().flush().unwrap();
 
@@ -137,7 +137,7 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
 
     let _entry_idx = 0;
     // *block_map.get(&prog.entry).unwrap(); // Should be 1
-    eprintln!("DEBUG: Block Map: {:?}", block_map);
+    // eprintln!("DEBUG: Block Map: {:?}", block_map);
 
     for (_i, block) in sorted_blocks {
         let mut ops = Vec::new();
@@ -160,9 +160,9 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
         // Dump var_map to check for collisions
         let mut keys: Vec<_> = var_map.keys().collect();
         keys.sort();
-        for k in keys {
-            eprintln!("DEBUG: var_map: {} -> {}", k, var_map.get(k).unwrap());
-        }
+        // for k in keys {
+        //     eprintln!("DEBUG: var_map: {} -> {}", k, var_map.get(k).unwrap());
+        // }
         blocks.push(Block { ops: ops });
     }
 
@@ -226,9 +226,9 @@ fn convert_term(
 ) {
     match term {
         Term::Let((x, _), atom, e) => {
-            if let Atom::Push(src) = atom {
-                eprintln!("DEBUG: Virtual Let x={} Atom=Push({})", x, src);
-            }
+            // if let Atom::Push(src) = atom {
+            //     eprintln!("DEBUG: Virtual Let x={} Atom=Push({})", x, src);
+            // }
             // else { eprintln!("DEBUG: Virtual Let x={} Atom={:?}", x, atom); }
             let dest_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
             convert_atom(
@@ -257,7 +257,7 @@ fn convert_term(
             );
         }
         Term::Jump(l) => {
-            eprintln!("DEBUG: Jump Label: {:?}", l);
+            // eprintln!("DEBUG: Jump Label: {:?}", l);
             if l == "halt" {
                 ops.push(Operation::Halt);
             } else if let Some(target_idx) = block_map.get(l) {
@@ -402,7 +402,7 @@ fn convert_atom(
 
             for x in xs {
                 let src_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
-                eprintln!("DEBUG: Tuple Push var={} addr={}", x, src_addr);
+                // eprintln!("DEBUG: Tuple Push var={} addr={}", x, src_addr);
                 // Push(x)
                 ops.push(Operation::Push(src_addr));
             }
