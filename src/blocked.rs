@@ -55,6 +55,7 @@ pub enum Term {
     Put(id::T, id::T, id::T),
     ExtArray(id::L),
     Goto(id::L),
+    JumpVar(id::T), // Unconditional jump to variable
     CallDir(id::L, Vec<id::T>),
 }
 
@@ -144,43 +145,39 @@ impl Converter {
         // If Closure: Split into Explicit (Top) and Cont (Bottom).
         // If Not Closure: All Args are Explicit (Top-to-Bottom).
 
+        // Argument Popping Order:
+        // If Continuation (starts with "k_"): Pop Last (Cont) -> Pop 0 -> Pop 1 ...
+        // If Normal Function: Pop 0 -> Pop 1 ... -> Pop Last
+
+        let is_continuation = func_label.starts_with("k_");
         let total_args = current_args.len();
-        if self.closure_fundefs.contains_key(&fundef.name.0) {
-            // Is Closure -> Expects [Cont] [Args] [FVs] [Code].
-            // (Args includes FVs).
-            // Pop Code (Outer). Pop Explicit (Middle). Pop Cont (Inner).
 
-            if total_args > 0 {
-                let last_idx = total_args - 1;
-                let (cont_arg, cont_ty) = &current_args[last_idx];
+        if is_continuation && total_args > 0 {
+            // Continuation: Pop Last First
+            let last_idx = total_args - 1;
+            let (last_arg, last_ty) = &current_args[last_idx];
 
-                // Pop Continuaton (Bottom / Inner)
+            // 2. Pop Remaining Args (0 to Last-1)
+            // Execution: Pop(0), Pop(1)...
+            // Wrap Reverse: Last-1 .. 0
+            for i in (0..last_idx).rev() {
+                let (arg, ty) = &current_args[i];
                 main_func_body = Term::Let(
-                    (cont_arg.clone(), cont_ty.clone()),
-                    Box::new(Term::Pop(cont_arg.clone())),
+                    (arg.clone(), ty.clone()),
+                    Box::new(Term::Pop(arg.clone())),
                     Box::new(main_func_body),
                 );
-
-                // Pop Explicit Args (Top / Middle)
-                // AppClsCont Pushes FVs (Index 0) on TOP of Args (Index 1).
-                // So we must Pop Index 0 First.
-                // rev() Loop 0..Last:
-                // Yield N..0. Let(N)... Let(0). Exec 0...N.
-                // So Pop 0 First.
-                for i in (0..last_idx).rev() {
-                    let (arg, ty) = &current_args[i];
-                    main_func_body = Term::Let(
-                        (arg.clone(), ty.clone()),
-                        Box::new(Term::Pop(arg.clone())),
-                        Box::new(main_func_body),
-                    );
-                }
             }
+
+            // 1. Pop Last Argument (First Execution)
+            main_func_body = Term::Let(
+                (last_arg.clone(), last_ty.clone()),
+                Box::new(Term::Pop(last_arg.clone())),
+                Box::new(main_func_body),
+            );
         } else {
-            // Not Closure (Join Block) -> Expects [Args] only.
-            // AppCont Pushes [Arg1] [Arg0]. Top Arg0.
-            // We want Pop Arg0 First.
-            // rev() Loop: Exec 0...N.
+            // Normal Function: Pop 0 -> Pop 1 ...
+            // Wrap Reverse: Last .. 0
             for i in (0..total_args).rev() {
                 let (arg, ty) = &current_args[i];
                 main_func_body = Term::Let(
@@ -191,28 +188,12 @@ impl Converter {
             }
         }
 
-        // 1. Pop CodePtr (MOVED HERE - Outer Wrap -> Exec First)
-        if let Some(_fundef_in_map) = self.closure_fundefs.get(&fundef.name.0) {
-            // eprintln!(
-            //     "DEBUG: convert_fundef checking closure: {}",
-            //     fundef_in_map.name.0
-            // );
-            // Verify if this function is actually called as a closure?
-            // If so, it expects [Cont] [Args] [FVs] [CodePtr] (Top)
+        // 1. Pop CodePtr (REMOVED)
+        // Callers (AppCont/TailCall) do NOT Push the CodePtr/ClosureTuple onto the stack.
+        // They unpack FVs and Push them individually.
+        // So we should NOT Pop a dummy CodePtr here.
 
-            // Pop Code Pointer (Arg0 in Flattened)
-            let code_ptr_var = id::gentmp(&Type::Int); // Dummy var for code ptr
-            main_func_body = Term::Let(
-                (code_ptr_var.clone(), Type::Int),
-                Box::new(Term::Pop(code_ptr_var)),
-                Box::new(main_func_body),
-            );
-        } else {
-            // eprintln!(
-            //     "DEBUG: convert_fundef NOT treating {} as closure (Not found in closure_fundefs)",
-            //     fundef.name.0
-            // );
-        }
+        // 4. Pop Continuation (Bottom)
 
         // 4. Pop Continuation (Bottom)
         // Implicitly handled by caller Pushing Cont Last (Bottom).
@@ -405,6 +386,24 @@ impl Converter {
 
                 res
             }
+
+            // Defunctionalization Return:
+            // 1. Pop Continuation Tag
+            // 2. Push Result
+            // 3. Jump to Tag
+            CpsTerm::Ret(x) => {
+                let tag = id::gentmp(&Type::Int);
+                let unit = id::gentmp(&Type::Unit);
+                Term::Let(
+                    (tag.clone(), Type::Int),
+                    Box::new(Term::Pop(tag.clone())),
+                    Box::new(Term::Let(
+                        (unit, Type::Unit),
+                        Box::new(Term::Push(x.clone())),
+                        Box::new(Term::JumpVar(tag)),
+                    )),
+                )
+            }
         }
     }
 }
@@ -522,6 +521,7 @@ impl fmt::Display for Term {
             Term::Put(x, y, z) => write!(f, "{}[{}] = {};", x, y, z),
             Term::ExtArray(x) => write!(f, "ExtArray({})", x),
             Term::Goto(l) => write!(f, "Goto {}", l),
+            Term::JumpVar(x) => write!(f, "JumpVar({})", x),
             Term::CallDir(l, args) => {
                 let args_s = args
                     .iter()

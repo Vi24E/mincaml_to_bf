@@ -52,15 +52,17 @@ pub enum Term {
     Let((id::T, Type), Atom, Box<Term>),
     // LetFuncall removed (only tail calls allowed)
     LetTuple(Vec<(id::T, Type)>, Atom, Box<Term>),
-    Jump(id::L),    // Unconditional jump to Label
-    JumpVar(id::T), // Unconditional jump to Variable (Dynamic)
-    CallExternal(String),
+    Jump(id::L),         // Unconditional jump to Label
+    JumpVar(id::T),      // Tail Call Dynamic by Variable
+    CallExternal(id::L), // External function call
+    Ret(id::T),          // Pop tag, push result, jump
 }
 
 struct Converter {
     blocks: Vec<Block>,
     // closure_map removed
     current_func_args_len: usize,
+    known_labels: HashMap<id::T, id::L>,
 }
 
 impl Converter {
@@ -68,6 +70,7 @@ impl Converter {
         Converter {
             blocks: Vec::new(),
             current_func_args_len: 0,
+            known_labels: HashMap::new(),
         }
     }
 
@@ -184,9 +187,22 @@ impl Converter {
                     Term::Jump(l.clone())
                 }
             }
-            BlockedTerm::TailCallDynamic(x) => Term::JumpVar(x.clone()),
+            BlockedTerm::TailCallDynamic(x) => {
+                if let Some(l) = self.known_labels.get(x) {
+                    if l == "print_int" || l == "min_caml_print_int" {
+                        Term::CallExternal(l.clone())
+                    } else if l == "halt" {
+                        Term::CallExternal(l.clone())
+                    } else {
+                        Term::Jump(l.clone())
+                    }
+                } else {
+                    Term::JumpVar(x.clone())
+                }
+            }
 
             BlockedTerm::Goto(l) => Term::Jump(l.clone()),
+            BlockedTerm::JumpVar(x) => Term::JumpVar(x.clone()),
 
             BlockedTerm::IfEq(x, y, e1, e2) => {
                 self.convert_if(x, y, e1, e2, dest, next, |x, y, c1, c2| {
@@ -218,8 +234,11 @@ impl Converter {
                     }
                     _ => {
                         // e1 is not Let. Should be atom.
-                        let term2 = self.convert_term(e2, dest, next);
                         if let Some(atom) = self.as_atom(e1) {
+                            if let Atom::LoadLabel(ref l) = atom {
+                                self.known_labels.insert(x.clone(), l.clone());
+                            }
+                            let term2 = self.convert_term(e2, dest, next);
                             Term::Let((x.clone(), t.clone()), atom, Box::new(term2))
                         } else {
                             panic!("Let e1 must be Atom in blocked IR, got: {:?}", e1);
@@ -317,6 +336,16 @@ pub fn f(prog: &BlockedProg, _closure_prog: &ClosureProg) -> Prog {
     func_arg_counts.insert("main".to_string(), 0); // Assuming main has 0 args
 
     let mut converter = Converter::new(func_arg_counts.clone());
+
+    // Register ALL block labels as known constant labels
+    // This allows TailCallDynamic(label_name) to be converted to Jump(label_name)
+    // even if it wasn't strictly Loaded via LoadLabel in the current block.
+    // (e.g. global function names)
+    for block in &prog.blocks {
+        converter
+            .known_labels
+            .insert(block.id.clone(), block.id.clone());
+    }
 
     let entry_label = prog.entry.clone();
 
@@ -529,6 +558,7 @@ impl fmt::Display for Term {
             Term::Jump(c) => write!(f, "Jump({})", c),
             Term::JumpVar(x) => write!(f, "JumpVar({})", x),
             Term::CallExternal(l) => write!(f, "CallExternal({})", l),
+            Term::Ret(x) => write!(f, "Ret({})", x),
         }
     }
 }

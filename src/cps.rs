@@ -48,8 +48,9 @@ pub enum Term {
     IfEq(id::T, id::T, Box<Term>, Box<Term>),
     IfLE(id::T, id::T, Box<Term>, Box<Term>),
     // LetRec removed as we lift to toplevel
-    App(id::T, Vec<id::T>), // Tail call / Jump (e.g. k x, halt x)
+    App(id::T, Vec<id::T>), // Tail call / Jump (block jump)
     AppCont(id::T, Vec<id::T>, id::L, Vec<id::T>), // Function call with continuation
+    Ret(id::T),             // Return to continuation (Pop tag, Push result, Jump)
 }
 
 // Helper to create a continuation function definition
@@ -59,10 +60,23 @@ fn make_continuation_closure(
     x: id::T,
     t_x: Type,
     k_name: String,
+    label_fvs: &HashMap<id::L, Vec<id::T>>,
+    cps_fundefs: &Rc<RefCell<Vec<Fundef>>>, // Added parameter
 ) -> (Fundef, Vec<id::T>, id::T) {
     // 1. Calculate free variables of the continuation body
     let mut zs = fv(&k_body_term);
     zs.remove(&x); // Remove argument
+
+    // Remove known labels from FVs (e.g. "halt", "min_caml_print_int")
+    zs.retain(|v| !label_fvs.contains_key(v));
+
+    // Also remove labels that are already defined in cps_fundefs (e.g. earlier continuations)
+    {
+        let borrowed_fundefs = cps_fundefs.borrow();
+        for f in borrowed_fundefs.iter() {
+            zs.remove(&f.name.0);
+        }
+    }
 
     let zs_vec: Vec<id::T> = zs.into_iter().collect();
 
@@ -247,8 +261,14 @@ pub fn g(
                 type_env.insert(x.clone(), Type::Unit);
                 let cont_body = k(x.clone());
                 let k_name = id::genid("k_cont");
-                let (cont_fundef, k_env, k_name) =
-                    make_continuation_closure(cont_body, x, Type::Int, k_name);
+                let (cont_fundef, k_env, k_name) = make_continuation_closure(
+                    cont_body,
+                    x,
+                    Type::Int,
+                    k_name,
+                    label_fvs,
+                    toplevel_fundefs,
+                );
                 toplevel_fundefs.borrow_mut().push(cont_fundef);
 
                 let mut new_args = fvs.clone();
@@ -285,8 +305,14 @@ pub fn g(
                     type_env.insert(x.clone(), Type::Unit);
                     let cont_body = k(x.clone());
                     let k_name = id::genid("k_cont");
-                    let (cont_fundef, k_env, k_name) =
-                        make_continuation_closure(cont_body, x, Type::Int, k_name);
+                    let (cont_fundef, k_env, k_name) = make_continuation_closure(
+                        cont_body,
+                        x,
+                        Type::Int,
+                        k_name,
+                        label_fvs,
+                        toplevel_fundefs,
+                    );
                     toplevel_fundefs.borrow_mut().push(cont_fundef);
 
                     // 5. Build Let sequences to unpack
@@ -333,8 +359,14 @@ pub fn g(
                     type_env.insert(x.clone(), Type::Unit);
                     let cont_body = k(x.clone());
                     let k_name = id::genid("k_cont");
-                    let (cont_fundef, k_env, k_name) =
-                        make_continuation_closure(cont_body, x, Type::Int, k_name);
+                    let (cont_fundef, k_env, k_name) = make_continuation_closure(
+                        cont_body,
+                        x,
+                        Type::Int,
+                        k_name,
+                        label_fvs,
+                        toplevel_fundefs,
+                    );
                     toplevel_fundefs.borrow_mut().push(cont_fundef);
 
                     let mut new_args = fvs.clone();
@@ -368,18 +400,7 @@ pub fn g(
             if is_external {
                 // External Call: Direct Execution
                 // let res = CallDir(l, args) in k(res)
-                let res = id::gentmp(&Type::Int); // Assuming Int/Float result. Type inference?
-                // We don't track return type here. Assuming Int for now or Unit?
-                // k expects a certain type.
-                // We should just generate Let((res, Type::Int), CallDir(..), k(res)).
-                // But the type of `res` depends on the external.
-                // For print_int, it returns Unit.
-                // For sin/cos, Float.
-                // We should lookup type?
-                // `g` receives `type_env`, but that's for variables.
-                // We can approximate type based on function name or context?
-                // Or just use Type::Int (it's typed as T anyway).
-                // Correctness depends mainly on backend handling.
+                let res = id::gentmp(&Type::Int);
                 type_env.insert(res.clone(), Type::Int);
 
                 Term::Let(
@@ -395,21 +416,24 @@ pub fn g(
                     .unwrap_or_else(|| panic!("AppDir: Label {} not found in label_fvs", l))
                     .clone();
 
-                // 1. (OPTIMIZED) No LoadLabel needed.
-
                 // 2. Construct Cont
                 let x = id::gentmp(&Type::Unit);
                 type_env.insert(x.clone(), Type::Unit);
                 let cont_body = k(x.clone());
                 let k_name = id::genid("k_cont");
-                let (cont_fundef, k_env, k_name) =
-                    make_continuation_closure(cont_body, x, Type::Int, k_name);
+                let (cont_fundef, k_env, k_name) = make_continuation_closure(
+                    cont_body,
+                    x,
+                    Type::Int,
+                    k_name,
+                    label_fvs,
+                    toplevel_fundefs,
+                );
                 toplevel_fundefs.borrow_mut().push(cont_fundef);
 
                 let mut new_args = fvs;
                 new_args.extend(args);
 
-                // Directly use 'l' as the function identifier in AppCont
                 Term::AppCont(l, new_args, k_name, k_env)
             }
         }
@@ -418,8 +442,14 @@ pub fn g(
             type_env.insert(res.clone(), Type::Int);
             let cont_body = k(res.clone());
             let k_name = id::genid("k_if");
-            let (cont_fundef, k_env, k_name) =
-                make_continuation_closure(cont_body, res, Type::Int, k_name);
+            let (cont_fundef, k_env, k_name) = make_continuation_closure(
+                cont_body,
+                res,
+                Type::Int,
+                k_name,
+                label_fvs,
+                toplevel_fundefs,
+            );
             toplevel_fundefs.borrow_mut().push(cont_fundef);
 
             let k_name1 = k_name.clone();
@@ -466,8 +496,14 @@ pub fn g(
             type_env.insert(res.clone(), Type::Int);
             let cont_body = k(res.clone());
             let k_name = id::genid("k_if");
-            let (cont_fundef, k_env, k_name) =
-                make_continuation_closure(cont_body, res, Type::Int, k_name);
+            let (cont_fundef, k_env, k_name) = make_continuation_closure(
+                cont_body,
+                res,
+                Type::Int,
+                k_name,
+                label_fvs,
+                toplevel_fundefs,
+            );
             toplevel_fundefs.borrow_mut().push(cont_fundef);
 
             let k_name1 = k_name.clone();
@@ -606,36 +642,55 @@ pub fn f(prog: &ClosureProg) -> Prog {
 
     for fundef in &prog.fundefs {
         let k_arg = id::genid("k");
-        let k_type = Type::Fun(vec![Type::Unit], Box::new(Type::Unit));
+        let k_type = Type::Fun(vec![Type::Unit], Box::new(Type::Unit)); // Continuation type
 
-        let mut new_args = Vec::new();
-        for (fv_name, fv_type) in &fundef.formal_fv {
-            new_args.push((fv_name.clone(), fv_type.clone()));
-        }
-        new_args.extend(fundef.args.clone());
-        new_args.push((k_arg.clone(), k_type));
-
+        // 1. Prepare type_env with ALL potential arguments
         let mut type_env = HashMap::new();
-        // Populate type_env with args
-        for (arg, t) in &new_args {
+        // Add formal_fv to type_env
+        for (fv_name, fv_type) in &fundef.formal_fv {
+            type_env.insert(fv_name.clone(), fv_type.clone());
+        }
+        // Add original args to type_env
+        for (arg, t) in &fundef.args {
             type_env.insert(arg.clone(), t.clone());
         }
+        // Add k_arg to type_env
+        type_env.insert(k_arg.clone(), k_type.clone());
 
-        let known_closures = HashMap::new(); // Initial empty known_closures map
+        let known_closures = HashMap::new();
         let k_arg_clone = k_arg.clone();
+
+        // 2. Generate body_cps
         let body_cps = g(
             fundef.body.clone(),
-            // k(x) -> App(k, [x])
-            Box::new(move |x| Term::App(k_arg_clone.clone(), vec![x])),
+            // k(x) -> Ret(x) (Defunctionalization: Pop Tag, Jump)
+            Box::new(move |x| Term::Ret(x)),
             &cps_fundefs,
             &mut type_env,
             &label_fvs,
             &known_closures,
         );
 
+        // 3. Calculate used FVs to filter unused args (Dead Code Elimination for Arguments)
+        let body_fvs = fv(&body_cps);
+
+        // 4. Construct final args list
+        let mut final_args = Vec::new();
+
+        // Only include formal_fv if used in body AND not a global label
+        for (fv_name, fv_type) in &fundef.formal_fv {
+            if body_fvs.contains(fv_name) && !label_fvs.contains_key(fv_name) {
+                final_args.push((fv_name.clone(), fv_type.clone()));
+            }
+        }
+
+        // Always include original args, BUT NOT k_arg (continuation is on stack)
+        final_args.extend(fundef.args.clone());
+        // final_args.push((k_arg.clone(), k_type)); // REMOVED
+
         cps_fundefs.borrow_mut().push(Fundef {
             name: (fundef.name.0.clone(), fundef.name.1.clone()),
-            args: new_args,
+            args: final_args, // Use filtered args
             body: Box::new(body_cps),
         });
     }
@@ -645,9 +700,7 @@ pub fn f(prog: &ClosureProg) -> Prog {
     let known_closures_start = HashMap::new();
     let main_cps_body = g(
         prog.body.clone(),
-        Box::new(|x| Term::App("halt".to_string(), vec![x])), // Treat "halt" as Var/Label call via App. Or LoadLabel needed?
-        // If we use App(x), blocked.rs treats x as Dynamic or Label.
-        // If "halt" is handled as a label in blocked, App("halt") is fine.
+        Box::new(|x| Term::App("halt".to_string(), vec![x])), // Treat "halt" as Var/Label call via App.
         &cps_fundefs,
         &mut type_env_start,
         &label_fvs,
@@ -749,6 +802,7 @@ impl fmt::Display for Term {
                     func, args, k, k_args
                 )
             }
+            Term::Ret(x) => write!(f, "Ret({})", x),
         }
     }
 }
@@ -800,7 +854,6 @@ fn try_atomic(e: &closure::Term) -> Option<Atom> {
         closure::Term::Put(x, y, z) => Some(Atom::Put(x.clone(), y.clone(), z.clone())),
         closure::Term::ExtArray(x) => Some(Atom::ExtArray(x.clone())),
         closure::Term::Tuple(xs) => Some(Atom::Tuple(xs.clone())),
-        closure::Term::AppDir(l, args) => Some(Atom::CallDir(l.clone(), args.clone())),
         _ => None,
     }
 }
@@ -846,6 +899,11 @@ pub fn fv(term: &Term) -> HashSet<id::T> {
             for arg in k_args {
                 s.insert(arg.clone());
             }
+            s
+        }
+        Term::Ret(x) => {
+            let mut s = HashSet::new();
+            s.insert(x.clone());
             s
         }
     }
@@ -907,6 +965,11 @@ pub fn fv_excluding_app_label(term: &Term) -> HashSet<id::T> {
             for arg in k_args {
                 s.insert(arg.clone());
             }
+            s
+        }
+        Term::Ret(x) => {
+            let mut s = HashSet::new();
+            s.insert(x.clone());
             s
         }
     }

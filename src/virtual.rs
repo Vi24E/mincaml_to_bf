@@ -209,6 +209,7 @@ fn analyze_term(term: &Term, constants: &mut HashMap<id::T, ConstVal>) {
         | Term::JumpVar(_)
         | Term::CallExternal(_) => {}
         Term::Atom(_) => {}
+        Term::Ret(_) => {} // Should be eliminated or handled elsewhere?
     }
 }
 
@@ -328,6 +329,7 @@ fn convert_term(
             );
         }
         Term::Atom(_) => panic!("Atom at tail position should not happen in blocked IR"),
+        Term::Ret(_) => {} // Should be eliminated by blocked.rs or handled if needed
     }
 }
 
@@ -383,7 +385,8 @@ fn convert_atom(
                     let src_addr = (var_start + offset * 32) as u32;
                     ops.push(Operation::MoveData(dst_addr, src_addr, 32));
                 } else if let Some(block_idx) = block_map.get(x) {
-                    ops.push(Operation::SetImm(dst_addr, *block_idx as i32));
+                    // Function Tag Offset: +1
+                    ops.push(Operation::SetImm(dst_addr, (*block_idx as i32) + 1));
                 } else {
                     panic!("SetArgs: Variable or Label not found: {}", x);
                 }
@@ -392,7 +395,8 @@ fn convert_atom(
         }
         Atom::LoadLabel(l) => {
             if let Some(idx) = block_map.get(l) {
-                ops.push(Operation::SetImm(dest_addr, *idx as i32));
+                // Function Tag Offset: +1
+                ops.push(Operation::SetImm(dest_addr, (*idx as i32) + 1));
             } else {
                 panic!("LoadLabel: Label not found: {}", l);
             }
