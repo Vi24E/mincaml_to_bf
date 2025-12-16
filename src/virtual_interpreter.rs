@@ -47,31 +47,10 @@ impl Simulator {
             }
 
             let block = &prog.blocks[self.pc];
-            // eprintln!("DEBUG: Executing Block {}", self.pc);
-            let sp_addr = prog.sp_addr;
-            let current_sp = self.read_int(sp_addr);
-            if true {
-                let _sp_val0 = self.read_int((current_sp as usize) - 32);
-                let _sp_val1 = self.read_int((current_sp as usize) - 64);
-                // eprintln!(
-                //     "DEBUG: Block {} Entry. SP={}, Top={}, Next={}",
-                //     self.pc, current_sp, sp_val0, sp_val1
-                // );
-            }
-            // eprintln!("DEBUG: Executing Block {} SP={}", self.pc, current_sp);
-
             // Execute Ops
             let current_pc = self.pc;
             for op in &block.ops {
                 self.execute_op(op, prog)?;
-                if self.pc == 0 {
-                    // Trace Block 0 specifically
-                    eprintln!(
-                        "DEBUG: Op Executed. SP (Addr {}) = {}",
-                        prog.sp_addr,
-                        self.read_int(prog.sp_addr)
-                    );
-                }
                 if !self.running {
                     break;
                 }
@@ -99,7 +78,6 @@ impl Simulator {
     fn execute_op(&mut self, op: &Operation, prog: &Prog) -> Result<(), String> {
         match op {
             Operation::SetImm(dest, val) => {
-                // eprintln!("DEBUG: SetImm addr={} val={}", dest, val);
                 self.write_int(*dest as usize, *val);
             }
             Operation::Halt => {
@@ -119,21 +97,18 @@ impl Simulator {
                 let v1 = self.read_int(*src1 as usize);
                 let v2 = self.read_int(*src2 as usize);
                 let res = v1.wrapping_add(v2);
-                // eprintln!("DEBUG: Add {} + {} = {} -> Mem[{}]", v1, v2, res, dest);
                 self.write_int(*dest as usize, res);
             }
             Operation::Sub(dest, src1, src2) => {
                 let v1 = self.read_int(*src1 as usize);
                 let v2 = self.read_int(*src2 as usize);
                 let res = v1.wrapping_sub(v2);
-                // eprintln!("DEBUG: Sub {} - {} = {} -> Mem[{}]", v1, v2, res, dest);
                 self.write_int(*dest as usize, res);
             }
             Operation::SubZ(dest, src1, src2) => {
                 let v1 = self.read_int(*src1 as usize);
                 let v2 = self.read_int(*src2 as usize);
                 let res = if v1 <= v2 { 0 } else { v1 - v2 };
-                // eprintln!("DEBUG: SubZ {} - {} = {} -> Mem[{}]", v1, v2, res, dest);
                 self.write_int(*dest as usize, res);
             }
             Operation::JumpIfZero(addr, l1, l2) => {
@@ -158,7 +133,6 @@ impl Simulator {
             Operation::JumpVar(src) => {
                 // `src` holds the block index (0-based)
                 let target = self.read_int(*src as usize);
-                // eprintln!("DEBUG: JumpVar addr={} target={}", src, target);
                 self.pc = target as usize;
             }
             Operation::MoveData(dest, src, size_bytes) => {
@@ -176,7 +150,6 @@ impl Simulator {
             Operation::CallExternal(name) => {
                 if name == "halt" {
                     self.running = false;
-                    // eprintln!("DEBUG: Halt called"); // Optional debug
                 } else if name == "print_int" || name == "min_caml_print_int" {
                     // Direct Call Convention (CallDir):
                     // Args are at stack_start (SetArgs).
@@ -210,7 +183,6 @@ impl Simulator {
 
                 self.write_int(sp as usize, val); // *sp = val
                 self.write_int(sp as usize, val); // *sp = val
-                // eprintln!("DEBUG: Push val={} from addr={} at SP={}", val, src, sp);
 
                 let new_sp = sp + 32; // sp += 32
                 self.write_int(sp_addr, new_sp);
@@ -221,7 +193,6 @@ impl Simulator {
 
                 sp -= 32; // sp -= 32
                 let val = self.read_int(sp as usize); // val = *sp
-                // eprintln!("DEBUG: Pop val={} into addr={}", val, dest);
 
                 self.write_int(*dest as usize, val); // *dest = val
                 self.write_int(sp_addr, sp);
@@ -241,7 +212,6 @@ impl Simulator {
     }
 
     pub fn write_int(&mut self, addr: usize, val: i32) {
-        // eprintln!("DEBUG: Mem[{}] <- {}", addr, val);
         for i in 0..32 {
             self.memory[addr + i] = if (val & (1 << i)) != 0 { 1 } else { 0 };
         }

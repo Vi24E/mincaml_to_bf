@@ -31,13 +31,13 @@ pub enum Atom {
     FMul(id::T, id::T),
     FDiv(id::T, id::T),
     Var(id::T),
-    SetArgs(Vec<id::T>), // 引数をスタックに保存
-    GetStack(usize),     // スタックから値を取得 (引数も含む)
+    SetArgs(Vec<id::T>),
+    GetStack(usize),         
     Tuple(Vec<id::T>),
     Get(id::T, id::T),
     Put(id::T, id::T, id::T),
     ExtArray(id::L),
-    LoadLabel(id::L), // Load label address (Block ID)
+    LoadLabel(id::L),     
     Push(id::T),
     Pop,
     GetSp,
@@ -50,17 +50,15 @@ pub enum Term {
     IfEq(id::T, id::T, id::L, id::L),
     IfLE(id::T, id::T, id::L, id::L),
     Let((id::T, Type), Atom, Box<Term>),
-    // LetFuncall removed (only tail calls allowed)
     LetTuple(Vec<(id::T, Type)>, Atom, Box<Term>),
-    Jump(id::L),         // Unconditional jump to Label
-    JumpVar(id::T),      // Tail Call Dynamic by Variable
-    CallExternal(id::L), // External function call
-    Ret(id::T),          // Pop tag, push result, jump
+    Jump(id::L),             
+    JumpVar(id::T),          
+    CallExternal(id::L),     
+    Ret(id::T),          
 }
 
 struct Converter {
     blocks: Vec<Block>,
-    // closure_map removed
     current_func_args_len: usize,
     known_labels: HashMap<id::T, id::L>,
 }
@@ -101,11 +99,9 @@ impl Converter {
             BlockedTerm::FMul(x, y) => self.bind_atom(Atom::FMul(x.clone(), y.clone()), dest, next),
             BlockedTerm::FDiv(x, y) => self.bind_atom(Atom::FDiv(x.clone(), y.clone()), dest, next),
             BlockedTerm::Var(x) => self.bind_atom(Atom::Var(x.clone()), dest, next),
-
             BlockedTerm::SetArgs(xs) => self.bind_atom(Atom::SetArgs(xs.clone()), dest, next),
             BlockedTerm::GetArg(i) => self.bind_atom(Atom::GetStack(*i), dest, next),
             BlockedTerm::GetEnv(i) => {
-                // Lambda Lifting: GetEnv(i) -> GetStack(current_func_args_len + i)
                 let new_idx = self.current_func_args_len + i;
                 self.bind_atom(Atom::GetStack(new_idx), dest, next)
             }
@@ -118,67 +114,19 @@ impl Converter {
             BlockedTerm::LoadLabel(l) => self.bind_atom(Atom::LoadLabel(l.clone()), dest, next),
             BlockedTerm::Push(x) => self.bind_atom(Atom::Push(x.clone()), dest, next),
             BlockedTerm::Pop(_x) => {
-                // BlockedTerm::Pop(x) -> Let x = Pop
                 if let Some((dest_x, _)) = &dest {
-                    // This shouldn't happen if Blocked Term Pop(x) means "Pop to x"
-                    // and we are visiting the term that defines x?
-                    // Waitt, blocked::Term is `Let(x, Pop(..), ..)`?
-                    // In `blocked.rs`, I used `Let((arg, ty), Box::new(Term::Pop(arg)), ...)`
-                    // So BlockedTerm::Pop(id::T) is effectively "Pop to id::T".
-                    // BUT `convert_term` structure handles `BlockedTerm::Let` recursively.
-                    // When it visits `e1` (which is Pop(arg)), `dest` is None usually?
-                    // No, `Let` case calls `convert_term(e2)`.
-                    // Then checks `e1`.
-                    // `as_atom` is used for `e1`.
-                    // So I need to update `as_atom` too!
-                    let _ = dest_x; // Mark as used to suppress warning
+                    let _ = dest_x;
                 }
-                // convert_term handles terms that are NOT atoms (like If, Let).
-                // Pop(x) is an atomic action in blocked?
-                // Wait, `Term::Pop(id::T)` is used in `Let`?
-                // `Let((arg, ty), Box::new(Term::Pop(arg)), ...)`
-                // So `e1` is `Term::Pop(arg)`.
-                // `as_atom` must handle it.
-                // Atom should be `Atom::Pop` (no arg) because `Let` handles the binding.
-                // So `BlockedTerm::Pop(x)` -> `Atom::Pop`. `x` is implicit in `Let`.
-                // Or we check consistency?
-                // Actually `BlockedTerm::Pop(x)` seems redundant if wrapped in `Let(x, Pop(x))`.
-                // But `blocked.rs` used `Term::Pop(arg)`.
-                // So `as_atom` should return `Atom::Pop`.
-
                 self.bind_atom(Atom::Pop, dest, next)
             }
             BlockedTerm::GetSp(_x) => self.bind_atom(Atom::GetSp, dest, next),
             BlockedTerm::CallDir(l, args) => {
                 self.bind_atom(Atom::CallDir(l.clone(), args.clone()), dest, next)
             }
-
-            // CallCls and CallBlock are removed from blocked::Term
-            // TailCallCls and TailCallBlock are the only calls
             BlockedTerm::TailCallCls(x) => {
-                // TailCallCls(x) -> JumpVar(x) because we treat x as a variable holding the target?
-                // Wait, blocked::TailCallCls(id::T) means x is a CLOSURE POINTER or CODE POINTER?
-                // In usual mincaml, Cls call means x is a closure.
-                // But blocked::TailCallCls fallback is used when we don't know the closure.
-                // So we assume x IS the code label? No.
-                // If x is a closure, we must extract code ptr.
-                // But `AppCls` handled that extraction!
-                // `AppCls` emits `TailCallDynamic(entry_var)`.
-                // So `TailCallCls` shouldn't appear if AppCls handled it?
-                // AppCls fallback (lines 178-183 in blocked.rs) emits `TailCallCls`.
-                // This fallback implies "Compiler couldn't optimize".
-                // If we implemented `TailCallDynamic`, we should use it in fallback too.
-                // But `convert_term` in blocked.rs is recursive.
-                // Let's assume TailCallCls is legacy/error now.
-                // But for safety, map it to JumpVar(x) assuming x is LABEL VARIABLE?
-                // Or Jump(Label(x))?
-                // id::T implies Variable.
                 Term::JumpVar(x.clone())
             }
             BlockedTerm::TailCallBlock(l) => {
-                // TailCallBlock(l) -> Jump(l)
-                // Check if external call
-                // Check if external call
                 if l == "print_int" || l == "min_caml_print_int" {
                     Term::CallExternal(l.clone())
                 } else if l == "halt" {
@@ -200,10 +148,8 @@ impl Converter {
                     Term::JumpVar(x.clone())
                 }
             }
-
             BlockedTerm::Goto(l) => Term::Jump(l.clone()),
             BlockedTerm::JumpVar(x) => Term::JumpVar(x.clone()),
-
             BlockedTerm::IfEq(x, y, e1, e2) => {
                 self.convert_if(x, y, e1, e2, dest, next, |x, y, c1, c2| {
                     Term::IfEq(x, y, c1, c2)
@@ -214,15 +160,9 @@ impl Converter {
                     Term::IfLE(x, y, c1, c2)
                 })
             }
-
             BlockedTerm::Let((x, t), e1, e2) => {
-                // Check if e1 is a nested Let, and flatten if so.
-                // e1 is Box<BlockedTerm>. We need to match on the Term inside.
-                // Use deref coercion or explicit deref.
                 match &**e1 {
                     BlockedTerm::Let((y, ty), y_val, y_body) => {
-                        // Flatten Let(x, Let(y, val, body), e2) -> Let(y, val, Let(x, body, e2))
-                        // y_val and y_body are &Box<Term>. Need to clone.
                         let rest =
                             BlockedTerm::Let((x.clone(), t.clone()), y_body.clone(), e2.clone());
                         let new_term = BlockedTerm::Let(
@@ -233,7 +173,6 @@ impl Converter {
                         self.convert_term(&new_term, dest, next)
                     }
                     _ => {
-                        // e1 is not Let. Should be atom.
                         if let Some(atom) = self.as_atom(e1) {
                             if let Atom::LoadLabel(ref l) = atom {
                                 self.known_labels.insert(x.clone(), l.clone());
@@ -246,7 +185,6 @@ impl Converter {
                     }
                 }
             }
-
             BlockedTerm::LetTuple(xts, y, e) => {
                 let term2 = self.convert_term(e, dest, next);
                 Term::LetTuple(xts.clone(), Atom::Var(y.clone()), Box::new(term2))
@@ -255,9 +193,6 @@ impl Converter {
     }
 
     fn bind_atom(&self, atom: Atom, dest: Option<(id::T, Type)>, next: Option<id::L>) -> Term {
-        // if let Atom::Push(ref x) = atom {
-        //     eprintln!("DEBUG: bind_atom Push({}) dest={:?}", x, dest);
-        // }
         match (dest, next) {
             (Some((x, t)), Some(next_l)) => Term::Let((x, t), atom, Box::new(Term::Jump(next_l))),
             (Some(_), None) => panic!("bind_atom: next label is None (Ret removed)"),
@@ -279,8 +214,7 @@ impl Converter {
         next: Option<id::L>,
         ctor: F,
     ) -> Term
-    where
-        F: FnOnce(id::T, id::T, id::L, id::L) -> Term,
+    where F: FnOnce(id::T, id::T, id::L, id::L) -> Term,
     {
         let l_then = self.new_block_id();
         let l_else = self.new_block_id();
@@ -313,10 +247,9 @@ impl Converter {
             BlockedTerm::ExtArray(l) => Some(Atom::ExtArray(l.clone())),
             BlockedTerm::LoadLabel(l) => Some(Atom::LoadLabel(l.clone())),
             BlockedTerm::SetArgs(xs) => Some(Atom::SetArgs(xs.clone())),
-            // BlockedTerm::GetStack does not exist. Handled via GetArg map or GetSp
             BlockedTerm::GetArg(i) => Some(Atom::GetStack(*i)),
             BlockedTerm::Push(x) => Some(Atom::Push(x.clone())),
-            BlockedTerm::Pop(_) => Some(Atom::Pop), // Pop(dest) maps to Pop atom
+            BlockedTerm::Pop(_) => Some(Atom::Pop),
             BlockedTerm::GetSp(_) => Some(Atom::GetSp),
             BlockedTerm::Tuple(xs) => Some(Atom::Tuple(xs.clone())),
             BlockedTerm::CallDir(l, args) => Some(Atom::CallDir(l.clone(), args.clone())),
@@ -326,21 +259,13 @@ impl Converter {
 }
 
 pub fn f(prog: &BlockedProg, _closure_prog: &ClosureProg) -> Prog {
-    // 1. Build func_arg_counts from prog.functions
     let mut func_arg_counts = HashMap::new();
     for (name, args) in &prog.functions {
         func_arg_counts.insert(name.clone(), args.len());
     }
-    // Main function has 0 args? Or it's not in fundefs.
-    // Main is usually entry point, 0 args.
-    func_arg_counts.insert("main".to_string(), 0); // Assuming main has 0 args
-
+    func_arg_counts.insert("main".to_string(), 0); 
     let mut converter = Converter::new(func_arg_counts.clone());
 
-    // Register ALL block labels as known constant labels
-    // This allows TailCallDynamic(label_name) to be converted to Jump(label_name)
-    // even if it wasn't strictly Loaded via LoadLabel in the current block.
-    // (e.g. global function names)
     for block in &prog.blocks {
         converter
             .known_labels
@@ -350,12 +275,6 @@ pub fn f(prog: &BlockedProg, _closure_prog: &ClosureProg) -> Prog {
     let entry_label = prog.entry.clone();
 
     for block in &prog.blocks {
-        // Check if this is function entry - logic removed.
-        // blocked.rs handles Pop insertion.
-        // if converter.func_arg_counts.contains_key(&block.id) {
-        //     converter.current_func_args_len = *converter.func_arg_counts.get(&block.id).unwrap();
-        // }
-
         let term = converter.convert_term(&block.term, None, None);
         converter.add_block(block.id.clone(), term);
     }
@@ -366,12 +285,7 @@ pub fn f(prog: &BlockedProg, _closure_prog: &ClosureProg) -> Prog {
         &prog.functions,
         &entry_label,
     );
-
-    // Resolve SetStack indices - Removed
-    // for block in &mut converter.blocks {
-    //     resolve_set_stack(&mut block.term, &layout.var_map);
-    // }
-
+                
     Prog {
         blocks: converter.blocks,
         entry: entry_label,
@@ -385,8 +299,7 @@ pub struct Layout {
     pub var_map: HashMap<id::T, usize>,
     pub block_count: usize,
     pub var_count: usize,
-    pub frame_sizes: HashMap<String, usize>, // Function Name -> Frame Size
-}
+    pub frame_sizes: HashMap<String, usize>, }
 
 fn compute_layout(
     blocks: &Vec<Block>,
@@ -399,64 +312,48 @@ fn compute_layout(
     let mut block_count = 0;
     let mut frame_sizes = HashMap::new();
 
-    // Ensure entry block is index 0
     block_map.insert(entry_label.clone(), 0);
     block_count += 1;
 
-    // Assign block IDs globally
     for block in blocks {
         if !block_map.contains_key(&block.id) {
             block_map.insert(block.id.clone(), block_count);
             block_count += 1;
         }
     }
-
-    // Assign variable IDs per function
-    // We iterate blocks. If a block ID matches a function name, we start a new function scope.
-    // We assume blocks for a function are contiguous.
-
+  
     let mut current_func_name = "main".to_string();
     let mut current_var_count = 0;
 
-    // Helper to map args
     let map_args = |func_name: &str, map: &mut HashMap<id::T, usize>, count: &mut usize| {
         if let Some((_, args)) = functions.iter().find(|(name, _)| name == func_name) {
             for arg in args {
                 if !map.contains_key(arg) {
                     map.insert(arg.clone(), *count);
-                    // eprintln!("DEBUG: Mapping Arg {} to {}", arg, *count);
                     *count += 1;
                 }
             }
         }
     };
 
-    // Initial args for main (usually none, but consistent)
     map_args(&current_func_name, &mut var_map, &mut current_var_count);
-
     for block in blocks {
-        // Check if we entered a new function
         if func_arg_counts.contains_key(&block.id) {
-            // Save previous frame size (accumulated count)
             frame_sizes.insert(current_func_name.clone(), current_var_count);
 
-            // Start new function - DO NOT RESET current_var_count
             current_func_name = block.id.clone();
-            // current_var_count = 0; // Removed to ensure unique variable IDs globally
             map_args(&current_func_name, &mut var_map, &mut current_var_count);
         }
 
         collect_vars(&block.term, &mut var_map, &mut current_var_count);
     }
-    // Save last frame size
     frame_sizes.insert(current_func_name, current_var_count);
-    let var_count = current_var_count + 1; // Total count + 1 (reserved for global comparison temp)
-
+    let var_count = current_var_count + 1; 
     Layout {
         block_map,
         var_map,
         block_count,
-        var_count, // This is now max frame size
+        var_count,
         frame_sizes,
     }
 }
@@ -480,9 +377,7 @@ fn collect_vars(term: &Term, map: &mut HashMap<id::T, usize>, count: &mut usize)
             }
             collect_vars(e, map, count);
         }
-        Term::IfEq(_, _, _, _) | Term::IfLE(_, _, _, _) => {
-            // No new variables defined in If branches in this IR (they are Jumps)
-        }
+        Term::IfEq(_, _, _, _) | Term::IfLE(_, _, _, _) => {}
         _ => {}
     }
 }

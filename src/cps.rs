@@ -47,30 +47,23 @@ pub enum Term {
     LetTuple(Vec<(id::T, Type)>, id::T, Box<Term>),
     IfEq(id::T, id::T, Box<Term>, Box<Term>),
     IfLE(id::T, id::T, Box<Term>, Box<Term>),
-    // LetRec removed as we lift to toplevel
-    App(id::T, Vec<id::T>), // Tail call / Jump (block jump)
-    AppCont(id::T, Vec<id::T>, id::L, Vec<id::T>), // Function call with continuation
-    Ret(id::T),             // Return to continuation (Pop tag, Push result, Jump)
+    App(id::T, Vec<id::T>), 
+    AppCont(id::T, Vec<id::T>, id::L, Vec<id::T>), 
+    Ret(id::T),
 }
 
-// Helper to create a continuation function definition
-// Returns: (Fundef, CapturedVars, ContinuationName)
 fn make_continuation_closure(
     k_body_term: Term,
     x: id::T,
     t_x: Type,
     k_name: String,
     label_fvs: &HashMap<id::L, Vec<id::T>>,
-    cps_fundefs: &Rc<RefCell<Vec<Fundef>>>, // Added parameter
+    cps_fundefs: &Rc<RefCell<Vec<Fundef>>>,
 ) -> (Fundef, Vec<id::T>, id::T) {
-    // 1. Calculate free variables of the continuation body
     let mut zs = fv(&k_body_term);
-    zs.remove(&x); // Remove argument
-
-    // Remove known labels from FVs (e.g. "halt", "min_caml_print_int")
+    zs.remove(&x);
     zs.retain(|v| !label_fvs.contains_key(v));
 
-    // Also remove labels that are already defined in cps_fundefs (e.g. earlier continuations)
     {
         let borrowed_fundefs = cps_fundefs.borrow();
         for f in borrowed_fundefs.iter() {
@@ -80,26 +73,21 @@ fn make_continuation_closure(
 
     let zs_vec: Vec<id::T> = zs.into_iter().collect();
 
-    // 2. Create continuation Fundef
-    // Lambda Lifting: Arguments are [captured_vars..., argument]
     let mut args: Vec<(id::T, Type)> = Vec::new();
     for z in &zs_vec {
-        args.push((z.clone(), Type::Int)); // Placeholder type for captured vars
+        args.push((z.clone(), Type::Int));
     }
-    args.push((x, t_x)); // The actual argument of the continuation
+    args.push((x, t_x));
 
     let fundef = Fundef {
-        name: (k_name.clone(), Type::Fun(vec![], Box::new(Type::Unit))), // Type is placeholder
+        name: (k_name.clone(), Type::Fun(vec![], Box::new(Type::Unit))),
         args: args,
         body: Box::new(k_body_term),
     };
 
-    // 3. Return Fundef, Captured Vars, and Name
     (fundef, zs_vec, k_name)
 }
 
-// CPS transformation
-// k: Continuation constructor. Takes the variable holding the result.
 pub fn g(
     e: closure::Term,
     k: Box<dyn FnOnce(id::T) -> Term>,
@@ -183,7 +171,7 @@ pub fn g(
             } else {
                 let toplevel_fundefs1 = toplevel_fundefs.clone();
                 let label_fvs_clone = label_fvs.clone();
-                let type_env_for_e2_closure = type_env.clone(); // Capture current type_env for the closure
+                let type_env_for_e2_closure = type_env.clone(); 
                 let known_closures_clone = known_closures.clone();
                 g(
                     *e1,
@@ -218,7 +206,6 @@ pub fn g(
             let mut tuple_elems = vec![entry_var.clone()];
             tuple_elems.extend(cls.actual_fv.clone());
 
-            // Add to known_closures for beta reduction optimisation
             let mut new_known_closures = known_closures.clone();
             new_known_closures.insert(x.clone(), (cls.entry.clone(), cls.actual_fv.clone()));
 
@@ -231,10 +218,9 @@ pub fn g(
                 &new_known_closures,
             );
 
-            // Dead Code Elimination
             let body_fvs = fv_excluding_app_label(&body_cps);
             if !body_fvs.contains(&x) {
-                // If x is not used (e.g. beta-reduced away), skip generating Let/Tuple/LoadLabel
+                
                 body_cps
             } else {
                 Term::Let(
@@ -249,14 +235,8 @@ pub fn g(
             }
         }
         closure::Term::AppCls(f, args) => {
-            // Check if f corresponds to a known closure for beta-reduction
+            
             if let Some((l, fvs)) = known_closures.get(&f) {
-                // Beta Reduction Optimization:
-                // Instead of unpacking closure 'f', we jump directly to label 'l'.
-                // We must construct the arguments: [FVs..., Args...]
-                // No LoadLabel needed, as we use the label 'l' directly in AppCont.
-
-                // 1. Construct Cont
                 let x = id::gentmp(&Type::Unit);
                 type_env.insert(x.clone(), Type::Unit);
                 let cont_body = k(x.clone());
@@ -274,11 +254,8 @@ pub fn g(
                 let mut new_args = fvs.clone();
                 new_args.extend(args);
 
-                // Directly use 'l' as the function identifier in AppCont
                 Term::AppCont(l.clone(), new_args, k_name, k_env)
             } else {
-                // Unpack Closure: f is a Tuple (CodePtr, Env...).
-
                 let tuple_info = if let Some(Type::Tuple(ts)) = type_env.get(&f) {
                     Some(ts[1..].to_vec())
                 } else {
@@ -286,13 +263,9 @@ pub fn g(
                 };
 
                 if let Some(fv_types) = tuple_info {
-                    // Standard Closure Call
-
-                    // 2. Extract CodePtr
                     let code_ptr_var = id::gentmp(&Type::Int);
                     type_env.insert(code_ptr_var.clone(), Type::Int);
 
-                    // 3. Extract FVs
                     let mut fv_vars = Vec::new();
                     for t in &fv_types {
                         let fv_temp = id::gentmp(t);
@@ -300,7 +273,6 @@ pub fn g(
                         fv_vars.push((fv_temp, t.clone()));
                     }
 
-                    // 4. Construct Cont
                     let x = id::gentmp(&Type::Unit);
                     type_env.insert(x.clone(), Type::Unit);
                     let cont_body = k(x.clone());
@@ -315,12 +287,11 @@ pub fn g(
                     );
                     toplevel_fundefs.borrow_mut().push(cont_fundef);
 
-                    // 5. Build Let sequences to unpack
                     let mut term = Term::AppCont(
                         code_ptr_var.clone(),
                         {
                             let mut all_args = Vec::new();
-                            // Arguments: FVs + OriginalArgs
+                            
                             for (v, _) in &fv_vars {
                                 all_args.push(v.clone());
                             }
@@ -331,16 +302,14 @@ pub fn g(
                         k_env,
                     );
 
-                    // Wrap in Lets (Reverse order)
-                    // let fv_n = f.n
                     for (i, (fv, t)) in fv_vars.iter().enumerate().rev() {
                         term = Term::Let(
                             (fv.clone(), t.clone()),
-                            Atom::Get(f.clone(), format!("{}", i + 1)), // Access index i+1
+                            Atom::Get(f.clone(), format!("{}", i + 1)), 
                             Box::new(term),
                         );
                     }
-                    // let code = f.0
+                    
                     term = Term::Let(
                         (code_ptr_var.clone(), Type::Int),
                         Atom::Get(f.clone(), "0".to_string()),
@@ -349,12 +318,7 @@ pub fn g(
 
                     term
                 } else if let Some(fvs) = label_fvs.get(&f) {
-                    // Fallback to Direct Call logic (AppDir style)
-                    // This happens if 'f' is actually a label name string, not a variable.
                     let l = f.clone();
-                    // 1. (OPTIMIZED) No LoadLabel needed. We pass the label 'l' directly.
-
-                    // 2. Construct Cont
                     let x = id::gentmp(&Type::Unit);
                     type_env.insert(x.clone(), Type::Unit);
                     let cont_body = k(x.clone());
@@ -372,7 +336,6 @@ pub fn g(
                     let mut new_args = fvs.clone();
                     new_args.extend(args);
 
-                    // Directly use 'l' as the function identifier in AppCont
                     Term::AppCont(l, new_args, k_name, k_env)
                 } else {
                     let f_type = type_env.get(&f);
@@ -384,7 +347,6 @@ pub fn g(
             }
         }
         closure::Term::AppDir(l, args) => {
-            // Check for Externals
             let is_external = l.starts_with("min_caml_")
                 || l == "print_int"
                 || l == "print_newline"
@@ -396,10 +358,7 @@ pub fn g(
                 || l == "int_of_float"
                 || l == "float_of_int"
                 || l == "floor";
-
             if is_external {
-                // External Call: Direct Execution
-                // let res = CallDir(l, args) in k(res)
                 let res = id::gentmp(&Type::Int);
                 type_env.insert(res.clone(), Type::Int);
 
@@ -409,14 +368,10 @@ pub fn g(
                     Box::new(k(res)),
                 )
             } else {
-                // Direct Call to Label `l`.
-                // We need to pass its FVs.
                 let fvs = label_fvs
                     .get(&l)
                     .unwrap_or_else(|| panic!("AppDir: Label {} not found in label_fvs", l))
                     .clone();
-
-                // 2. Construct Cont
                 let x = id::gentmp(&Type::Unit);
                 type_env.insert(x.clone(), Type::Unit);
                 let cont_body = k(x.clone());
@@ -552,7 +507,7 @@ pub fn g(
                 if let Some(t) = type_env.get(x_elem) {
                     elem_types.push(t.clone());
                 } else {
-                    elem_types.push(Type::Int); // Default or error
+                    elem_types.push(Type::Int); 
                 }
             }
             type_env.insert(y.clone(), Type::Tuple(elem_types));
@@ -613,15 +568,14 @@ pub fn g(
 pub fn f(prog: &ClosureProg) -> Prog {
     let cps_fundefs = Rc::new(RefCell::new(Vec::new()));
 
-    // Build Label FVs map
     let mut label_fvs = HashMap::new();
     for fundef in &prog.fundefs {
         let fvs: Vec<id::T> = fundef.formal_fv.iter().map(|(x, _)| x.clone()).collect();
         label_fvs.insert(fundef.name.0.clone(), fvs);
     }
-    // Halt logic
+    
     label_fvs.insert("halt".to_string(), vec![]);
-    // Standard Library Externals
+    
     let externals = vec![
         "min_caml_print_int",
         "min_caml_print_newline",
@@ -642,28 +596,25 @@ pub fn f(prog: &ClosureProg) -> Prog {
 
     for fundef in &prog.fundefs {
         let k_arg = id::genid("k");
-        let k_type = Type::Fun(vec![Type::Unit], Box::new(Type::Unit)); // Continuation type
+        let k_type = Type::Fun(vec![Type::Unit], Box::new(Type::Unit)); 
 
-        // 1. Prepare type_env with ALL potential arguments
         let mut type_env = HashMap::new();
-        // Add formal_fv to type_env
+        
         for (fv_name, fv_type) in &fundef.formal_fv {
             type_env.insert(fv_name.clone(), fv_type.clone());
         }
-        // Add original args to type_env
+        
         for (arg, t) in &fundef.args {
             type_env.insert(arg.clone(), t.clone());
         }
-        // Add k_arg to type_env
+        
         type_env.insert(k_arg.clone(), k_type.clone());
 
         let known_closures = HashMap::new();
-        let k_arg_clone = k_arg.clone();
-
-        // 2. Generate body_cps
+        
         let body_cps = g(
             fundef.body.clone(),
-            // k(x) -> Ret(x) (Defunctionalization: Pop Tag, Jump)
+            
             Box::new(move |x| Term::Ret(x)),
             &cps_fundefs,
             &mut type_env,
@@ -671,26 +622,21 @@ pub fn f(prog: &ClosureProg) -> Prog {
             &known_closures,
         );
 
-        // 3. Calculate used FVs to filter unused args (Dead Code Elimination for Arguments)
         let body_fvs = fv(&body_cps);
 
-        // 4. Construct final args list
         let mut final_args = Vec::new();
 
-        // Only include formal_fv if used in body AND not a global label
         for (fv_name, fv_type) in &fundef.formal_fv {
             if body_fvs.contains(fv_name) && !label_fvs.contains_key(fv_name) {
                 final_args.push((fv_name.clone(), fv_type.clone()));
             }
         }
 
-        // Always include original args, BUT NOT k_arg (continuation is on stack)
         final_args.extend(fundef.args.clone());
-        // final_args.push((k_arg.clone(), k_type)); // REMOVED
 
         cps_fundefs.borrow_mut().push(Fundef {
             name: (fundef.name.0.clone(), fundef.name.1.clone()),
-            args: final_args, // Use filtered args
+            args: final_args, 
             body: Box::new(body_cps),
         });
     }
@@ -700,7 +646,7 @@ pub fn f(prog: &ClosureProg) -> Prog {
     let known_closures_start = HashMap::new();
     let main_cps_body = g(
         prog.body.clone(),
-        Box::new(|x| Term::App("halt".to_string(), vec![x])), // Treat "halt" as Var/Label call via App.
+        Box::new(|x| Term::App("halt".to_string(), vec![x])), 
         &cps_fundefs,
         &mut type_env_start,
         &label_fvs,
@@ -709,7 +655,7 @@ pub fn f(prog: &ClosureProg) -> Prog {
 
     let start_fundef = Fundef {
         name: (start_name.clone(), Type::Fun(vec![], Box::new(Type::Unit))),
-        args: vec![], // Closed main
+        args: vec![], 
         body: Box::new(main_cps_body),
     };
     cps_fundefs.borrow_mut().push(start_fundef);
@@ -933,11 +879,6 @@ pub fn fv_excluding_app_label(term: &Term) -> HashSet<id::T> {
             s
         }
         Term::App(f, args) => {
-            // App(f, args) is dynamic jump term/label jump. f is variable or label?
-            // In CPS term, App first arg is id::T.
-            // If it's a label, we shouldn't count it?
-            // But App is low level jump. Let's assume it counts for now.
-            // We focus on AppCont.
             let mut s = HashSet::new();
             s.insert(f.clone());
             for arg in args {
@@ -946,19 +887,8 @@ pub fn fv_excluding_app_label(term: &Term) -> HashSet<id::T> {
             s
         }
         Term::AppCont(_f, args, _, k_args) => {
-            // Special case: _f is NOT added to FV set.
-            // This assumes _f is a label (beta-reduced) or we don't care if it's dynamic
-            // (if dynamic, it should have been defined elsewhere, but here we are checking
-            // if we can remove the DEFINITION of _f as a CLOSURE variable.
-            // If _f is dynamic (code ptr), it must come from somewhere else, not the closure var itself?
-            // Wait, if _f comes from Let code = ... then removing Let code is bad.
-            // But MakeCls defines `x`. We check if `x` is used.
-            // If `x` is used as `AppCont(x, ...)`:
-            //   If `x` was the closure variable, and we beta-reduced, `AppCont` now conceptually uses `x` as label.
-            //   So we don't need the closure tuple `x`.
-            //   So omitting `x` from FV is correct.
             let mut s = HashSet::new();
-            // s.insert(f.clone()); // EXCLUDED
+            
             for arg in args {
                 s.insert(arg.clone());
             }

@@ -26,19 +26,6 @@ pub enum Term {
     IfLE(id::T, id::T, Box<Term>, Box<Term>),
     Let((id::T, Type), Box<Term>, Box<Term>),
     Var(id::T),
-    // MakeCls removed
-    // CallCls removed (integrated into CallBlock/TailCallBlock or handled via Dispatcher if needed)
-    // For now, we assume all calls are optimized or we panic/use a placeholder if not.
-    // But to be safe, let's keep CallCls/TailCallCls for unknown functions if we don't implement dispatcher yet.
-    // The user said "TailCallCls also integrated into TailCallBlock".
-    // This implies we should use TailCallBlock for everything.
-    // If it's a variable, we might need TailCallBlock(Var)? No, Block takes Label.
-    // So we probably need TailCallDynamic(id::T)?
-    // Or we stick to the user's request and try to remove TailCallCls.
-    // If we remove it, we must ensure all calls are to labels.
-    // This is true if we have a dispatcher.
-    // For this step, I will keep TailCallCls but try not to use it for known closures.
-    // CallCls and CallBlock removed (only tail calls allowed)
     TailCallCls(id::T),
     TailCallBlock(id::L),
     TailCallDynamic(id::T), // Call entry point stored in variable
@@ -69,23 +56,15 @@ pub struct Prog {
 struct Converter {
     blocks: Vec<(String, Term)>,
     closure_fundefs: HashMap<String, crate::closure::Fundef>,
-    // Tuple/Label Tracking for Devirtualization
     tuple_env: HashMap<id::T, Vec<id::T>>,
     label_env: HashMap<id::T, id::L>,
 
-    // Stack Frame Tracking for Cleanup (TailCall optimization)
     locals_stack: Vec<id::T>,
-
-    // Locals (Scalars)
     locals: HashSet<id::T>,
 }
 
 impl Converter {
     fn new(closure_fundefs: HashMap<String, crate::closure::Fundef>) -> Converter {
-        // eprintln!(
-        //     "DEBUG: Converter initialized with closure_fundefs: {:?}",
-        //     closure_fundefs.keys().collect::<Vec<_>>()
-        // );
         Converter {
             blocks: Vec::new(),
             closure_fundefs,
@@ -97,22 +76,12 @@ impl Converter {
     }
 
     fn add_block(&mut self, label: String, term: Term) {
-        // eprintln!("DEBUG: blocked::add_block: {}", label);
         self.blocks.push((label, term));
     }
 
     fn convert_fundef(&mut self, fundef: &cps::Fundef) {
         let func_label = fundef.name.0.clone();
-
-        // eprintln!(
-        //     "DEBUG: convert_fundef: {} args: {:?}",
-        //     func_label, fundef.args
-        // );
-
         let current_args = fundef.args.clone();
-
-        // Scope Management:
-        // Save current locals.
         let saved_locals = self.locals.clone();
 
         for (arg, _ty) in &current_args {
@@ -122,44 +91,14 @@ impl Converter {
         let body_term = self.convert_term(&fundef.body);
         let mut main_func_body = body_term;
 
-        // Restore locals
         self.locals = saved_locals;
-
-        // Argument Popping Order: Reverse Order
-        // Caller Pushes:
-        // 1. Continuation Frames (Deepest)
-        // 2. Scalar Arguments (Top)
-        //
-        // Function defines: [FV1, FV2, ..., Arg, Cont]
-        // We Pop All Arguments (including Cont).
-        // Stack Top: Cont -> ArgN -> ... -> Arg0.
-        // Forward Loop: Let(ArgN, Pop, ... Let(Arg0, Pop)).
-        // Exec: Pop ArgN (Cont). ... Pop Arg0.
-
-        // 1. Pop CodePtr (MOVED TO END - Outer Wrap)
-        // 2. Pop FVs (REMOVED - Included in Explicit Args)
-        // args already includes FVs. Pop Explicit Args loop handles them.
-        // But we DO need to Pop CodePtr because it is NOT in args. (Assuming CodePtr Arg0 convention).
-
-        // 3. Pop Args
-        // If Closure: Split into Explicit (Top) and Cont (Bottom).
-        // If Not Closure: All Args are Explicit (Top-to-Bottom).
-
-        // Argument Popping Order:
-        // If Continuation (starts with "k_"): Pop Last (Cont) -> Pop 0 -> Pop 1 ...
-        // If Normal Function: Pop 0 -> Pop 1 ... -> Pop Last
 
         let is_continuation = func_label.starts_with("k_");
         let total_args = current_args.len();
 
         if is_continuation && total_args > 0 {
-            // Continuation: Pop Last First
             let last_idx = total_args - 1;
             let (last_arg, last_ty) = &current_args[last_idx];
-
-            // 2. Pop Remaining Args (0 to Last-1)
-            // Execution: Pop(0), Pop(1)...
-            // Wrap Reverse: Last-1 .. 0
             for i in (0..last_idx).rev() {
                 let (arg, ty) = &current_args[i];
                 main_func_body = Term::Let(
@@ -169,15 +108,12 @@ impl Converter {
                 );
             }
 
-            // 1. Pop Last Argument (First Execution)
             main_func_body = Term::Let(
                 (last_arg.clone(), last_ty.clone()),
                 Box::new(Term::Pop(last_arg.clone())),
                 Box::new(main_func_body),
             );
         } else {
-            // Normal Function: Pop 0 -> Pop 1 ...
-            // Wrap Reverse: Last .. 0
             for i in (0..total_args).rev() {
                 let (arg, ty) = &current_args[i];
                 main_func_body = Term::Let(
@@ -188,32 +124,10 @@ impl Converter {
             }
         }
 
-        // 1. Pop CodePtr (REMOVED)
-        // Callers (AppCont/TailCall) do NOT Push the CodePtr/ClosureTuple onto the stack.
-        // They unpack FVs and Push them individually.
-        // So we should NOT Pop a dummy CodePtr here.
-
-        // 4. Pop Continuation (Bottom)
-
-        // 4. Pop Continuation (Bottom)
-        // Implicitly handled by caller Pushing Cont Last (Bottom).
-        // If function expects Cont as Argument (e.g. k_cont),
-        // Wait. `current_args` contains explicit args.
-        // If `k_cont` is in explicit args, it's handled in Step 3.
-        // We just need to ensure Push Order matches Pop Order.
-        // Stack: [K] [Args] [FVs] [Code] (Top).
-        // Pop Code. Pop FVs. Pop Args. Pop K. Matches.
-
         self.add_block(func_label.clone(), main_func_body);
     }
 
-    // Helper: Push Value (Label or Scalar)
     fn push_val(&self, arg: &id::T, res: Term) -> Term {
-        // eprintln!(
-        //     "DEBUG: push_val {} (In locals: {})",
-        //     arg,
-        //     self.locals.contains(arg)
-        // );
         if self.locals.contains(arg) {
             Term::Let(
                 (id::gentmp(&Type::Unit), Type::Unit),
@@ -221,7 +135,6 @@ impl Converter {
                 Box::new(res),
             )
         } else if self.closure_fundefs.contains_key(arg) {
-            // Known Global Function Label: Load Address then Push
             let label_var = id::gentmp(&Type::Int);
             Term::Let(
                 (label_var.clone(), Type::Int),
@@ -233,7 +146,6 @@ impl Converter {
                 )),
             )
         } else {
-            // Fallback for globals/constants
             Term::Let(
                 (id::gentmp(&Type::Unit), Type::Unit),
                 Box::new(Term::Push(arg.clone())),
@@ -338,11 +250,6 @@ impl Converter {
                 res
             }
             CpsTerm::AppCont(f, args, k_label, k_args) => {
-                // Stack Layout: [Args] (Top) -> K_Label -> [K_Args] (Bottom)
-                // Exec: Push K_Args -> Push K_Label -> Push Args -> Jump
-
-                // 1. Jump f
-                // Check if f is a known label (Optimization for Beta Reduction)
                 let is_external = f.starts_with("min_caml_")
                     || f == "print_int"
                     || f == "print_newline"
@@ -362,12 +269,10 @@ impl Converter {
                     Term::TailCallDynamic(f.clone())
                 };
 
-                // 2. Wrap Push Args (Forward loop -> Top=Arg1)
                 for arg in args {
                     res = self.push_val(arg, res);
                 }
 
-                // 3. Wrap Push K_Label
                 let k_label_val = id::gentmp(&Type::Int);
                 res = Term::Let(
                     (k_label_val.clone(), Type::Int),
@@ -379,7 +284,6 @@ impl Converter {
                     )),
                 );
 
-                // 4. Wrap Push K_Args (Forward loop -> Bottom=Arg1)
                 for k_arg in k_args {
                     res = self.push_val(k_arg, res);
                 }
@@ -387,10 +291,6 @@ impl Converter {
                 res
             }
 
-            // Defunctionalization Return:
-            // 1. Pop Continuation Tag
-            // 2. Push Result
-            // 3. Jump to Tag
             CpsTerm::Ret(x) => {
                 let tag = id::gentmp(&Type::Int);
                 let unit = id::gentmp(&Type::Unit);
@@ -408,12 +308,7 @@ impl Converter {
     }
 }
 
-// scan_papp removed
-// scan_arg_counts removed (unused)
-// scan_fv_counts removed (unused)
-
 pub fn f(prog: &CpsProg, closure_prog: &crate::closure::Prog) -> Prog {
-    // 2. Collect Closure Fundefs for AppCls usage
     let mut closure_fundefs = HashMap::new();
     for fundef in &closure_prog.fundefs {
         closure_fundefs.insert(fundef.name.0.clone(), fundef.clone());
@@ -428,11 +323,6 @@ pub fn f(prog: &CpsProg, closure_prog: &crate::closure::Prog) -> Prog {
     for fundef in &prog.fundefs {
         converter.convert_fundef(fundef);
     }
-
-    // eprintln!("DEBUG: blocked::blocks count: {}", converter.blocks.len());
-    // for (id, _) in &converter.blocks {
-    //     eprintln!("DEBUG: blocked::block: {}", id);
-    // }
 
     Prog {
         blocks: converter

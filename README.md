@@ -1,3 +1,4 @@
+
 この記事は[理情 Advent Calendar 2025](https://adventar.org/calendars/12011)の16日目の記事です。
 
 よかったら、他の記事も読んでくださると幸いです。
@@ -20,6 +21,12 @@
 
 # 今回の目標
 Ocamlのサブセットであり、仕様のサイズが小さい関数型言語であるmincaml(のさらにサブセット)を、かの有名なesolangであるbrainfuckにコンパイルするトランスコンパイラの作成を目標とします。
+
+:::note warn
+部分関数を返す様な関数など、関数自体をオブジェクトとして扱うコードは未検証です。
+また、入出力が現状未対応です。
+:::
+
 
 ### 具体的なレギュレーション
 - コンパイルするmincamlにはFloat, Tuple, Arrayが含まれないものとする
@@ -261,7 +268,7 @@ let rec fib_alt k n cont =
   if n <= 1 then cont n
   else 
     let g n k fib_alt cont x = 
-      let h n k x cont y = 
+      let h　k x cont y = 
         let t = x + y + k in
         cont (t + t)
       in
@@ -421,11 +428,126 @@ k = 42  |
 fib_alt |
 print   |
 ```
-上図のように継続を部分適応部分の最後におくことで、スタックの下側を自然にcontとしている点です。これは継続を1度のみ使うLiniar Continuationの強みで、これによってスタックマシンによる再帰の実行が完了しました。
+上図のように継続を部分適応部分の最後におくことで、スタックの下側を自然にcontとしている点です。これは継続を1度のみ使うLiniar Continuationの強みで、これによってスタックマシンによる再帰の実行が可能となります。
+
+これを踏まえて関数の変換を行うと、
+```ocaml
+let g n k fib_alt cont x = 
+  fib_alt (n - 2) (h k x cont)
+in
+let h k x cont y = 
+  let t = x + y + k in
+  cont (t + t)
+in
+let k = 42 in
+let rec fib_alt k n cont =
+  if n <= 1 then cont n
+  else fib_alt (n - 1) (g n k fib_alt cont)
+in 
+let rec print x = print_int x in
+fib_alt k 5 print
+```
+は、
+```c
+g:
+    x = pop()
+    cont = pop()
+    fib_alt = pop()
+    k = pop()
+    n = pop()
+    push(cont)
+    push(x)
+    push(k)
+    push(h)
+    push(n - 2)
+    jump("fib_alt")
+
+h:
+    y = pop()
+    cont = pop()
+    x = pop()
+    k = pop()
+    t = x + y + k
+    push(t + t)
+    jump(cont)
+
+fib_alt:
+    cont = pop()
+    n = pop()
+    k = pop()
+    if n <= 1 then jump("if_fib_alt")
+    else jump("else_fib_alt")
+
+if_fib_alt:
+    push(n)
+    jump(cont)
+
+else_fib_alt:
+    push(cont)
+    push("fib_alt")
+    push(k)
+    push(n)
+    push("g")
+    push(n - 1)
+    jump("fib_alt")
+
+print:
+    x = pop()
+    print_int x
+    Halt
+
+main:
+    k = 42
+    push("print")
+    push(5)
+    push(k)
+    jump("fib_alt")
+```
+のように、非常にシンプルな形で記述できました。[^13]
+
+## その後
+あとはbrainfuckでそれぞれの命令を記述するだけです！
+頑張りましょう！[^14]
+
+# あとがき
+brainfuckトランスコンパイラと言いながら、ランダムアクセスメモリを縛ったことで、実質的にスタックマシンへのコンパイルが主になりました。自分はdcも好んで使っているので、もしかしたらスタックマシンが好きなのかもしれません。
+
+さて、あとがきを書いている時点(12月16日の昼間)でも、まだ実装が終わっていません。
+アドカレの記事を書くときには、まずちゃんと工数を見積もってからプロジェクトを決めましょう。[^15]
+当初は5時間くらいでできるかなぁと思ったプロジェクトに50時間以上かかっています。
+
+この記事でやったことはCPU実験における「余興」に当たります。
+余興のせいで本編を蔑ろにしてしまったのですが、一応色々な最適化手法に触れることができたり、メモリの配置について詳しくなったりしたので、班員の皆さん許してください。
+
+ここまでお読みいただきありがとうございます。
+
+# 作成したものがこちらになります
+https://github.com/Vi24E/mincaml_to_bf
+
+
+シミュレータの動作ですが、無事`fib_alt`で`2144`が計算されたことが確認できます。[^16][^17]
+![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/2354884/3bed85b3-34f3-4b85-8244-e448524d0570.png)
+
+<details open><summary> サンプルコード(fib(10)) </summary>
+
+```brainfuck:fib.bf
+insert brainfuck code here
+```
+</details>
+
+<details open><summary> サンプルコード(fib_alt(5)) </summary>
+
+```brainfuck:fib_alt.bf
+insert brainfuck code here
+```
+</details>
+
+# 最後に
+このプロジェクトを始めてから体感50%くらいでbrainfuckの悪夢を見る様になりました、助けてください
 
 [^1]: なんとこれを書いている12月15日現在、いまだにコンパイラのデバッグが終わっていません
 [^2]: コンパイラで生成されたコードが環境依存していると嫌なので
-[^3]: そうでないとチューリング完全でないので、なおたいていのコードはテープ長30000以下でおさまります。
+[^3]: そうでないとチューリング完全でないので甘めに無制限としています。なおある程度のコードはテープ長30000以下でおさまります。
 [^4]: mincamlがOcamlのサブセット言語としての呼び名と、[mincaml処理系](https://esumii.github.io/min-caml/)としての呼び名でオーバーロードされているため、誤解が生じる際は以下mincaml言語とmincaml処理系と書き分けます。
 [^5]: 最適化途中の疑似コードとして使用する機会があるので
 [^6]: おそらくランダムアクセスを全力で回避するより、ランダムアクセスを実装した方が間違いなく簡単です。今回は面白さのために全力で回避します。
@@ -435,3 +557,8 @@ print   |
 [^10]: 思いついたものには大体名前がついているものですね
 [^11]: ランダムアクセスのために2Bの領域を確保しています
 [^12]: 2144を出力するコードです。
+[^13]: 簡単のために多少の実行順序の変更を行なっています。
+[^14]: 頑張りました
+[^15]: 理論が間違っていて、工数を見間違えたのが原因ではありましたが...
+[^16]: printなどは力尽きたので後日...
+[^17]: 12月16日20時42分に実装完了しました

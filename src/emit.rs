@@ -4,21 +4,12 @@ pub fn f(prog: &Prog) -> String {
     let mut bf_code = String::new();
     let mut current_ptr = 0;
 
-    let buf_size = 32; // User requested reduction
+    let buf_size = 32;
     let reg_start = prog.reg_start as u32;
     let var_start = prog.var_start as u32;
     let stack_start = prog.stack_start as u32;
-    // buffer should always zero filled after operation
     let buffer_start = (prog.var_start - buf_size) as u32;
-    let hp_ptr = 10000;
-    let hp_reg_start = hp_ptr + 32;
-    let _heap_start = hp_reg_start + 64; // Temporarily unused
-    // heap: [hp_ptr][hp_regs...(128)][heap]
-    // heap(with 33 bit) will grow upper
 
-    // Metadata for Debugger (Ignored by BF as comments)
-    // Format: DEBUG_METADATA{{REG_START:{} BUFFER_START:{} VAR_START:{} STACK_START:{}}}
-    // Ensure no BF command chars in this string.
     bf_code.push_str(&format!(
         "DEBUG_METADATA{{REG_START:{} BUFFER_START:{} VAR_START:{} STACK_START:{}}}\n",
         reg_start, buffer_start, var_start, stack_start
@@ -31,7 +22,6 @@ pub fn f(prog: &Prog) -> String {
     // [var_start..stack_start]: Variables
     // [stack_start..]: Stack
 
-    // Initialize: Activate Entry Block (1) and Running Flag (0)
     let running_flag = 0;
 
     // Set Running Flag (0)
@@ -111,7 +101,6 @@ pub fn f(prog: &Prog) -> String {
                     bf_code.push_str(&"<".to_string().repeat(32));
                 }
                 Operation::Pop(dest) => {
-                    // bug
                     /*
                     3 bit pop
                     >>> >>>>[>>>>]<<<< <<< // move to last
@@ -369,16 +358,13 @@ pub fn f(prog: &Prog) -> String {
                     bf_code.push_str("]");
                     clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
                 }
-                Operation::JumpIfLE(_, _, _) => {
-                    // Stub for JumpIfLE
-                }
                 Operation::Jump(target) => {
                     bf_code.push_str(
                         &(format!("\n# Jump target:{} Expected: {}\n", target, current_ptr)
                             .to_string()),
                     );
                     move_ptr(&mut bf_code, &mut current_ptr, (*target + 1) * 2);
-                    bf_code.push('+'); // activate block
+                    bf_code.push('+');
                 }
                 Operation::JumpVar(src) => {
                     bf_code.push_str(
@@ -448,9 +434,7 @@ pub fn f(prog: &Prog) -> String {
                         )
                         .to_string()),
                     );
-                    //if dest >= &stack_start {
                     clear_range(&mut bf_code, &mut current_ptr, *dest, 32);
-                    //}
                     copy(
                         &mut bf_code,
                         &mut current_ptr,
@@ -468,7 +452,6 @@ pub fn f(prog: &Prog) -> String {
                         );
                         move_ptr(&mut bf_code, &mut current_ptr, running_flag);
                         bf_code.push_str("[-]");
-                        // clear_range(&mut bf_code, &mut current_ptr, reg_start, 128); // DISABLED
                     } else if name == "min_caml_print_int" || name == "print_int" {
                         bf_code.push_str(
                             &(format!("\n# CallExternal Stub name:{}\n", name).to_string()),
@@ -505,16 +488,13 @@ pub fn f(prog: &Prog) -> String {
         move_ptr(&mut bf_code, &mut current_ptr, ((i + 1) * 2) as u32);
         bf_code.push(']');
     }
-    // Return to running flag for outer loop check
     move_ptr(&mut bf_code, &mut current_ptr, running_flag);
     bf_code.push(']');
 
     bf_code
 }
 
-#[allow(dead_code)]
 fn move_ptr(bf_code: &mut String, current_ptr: &mut u32, target_ptr: u32) {
-    // println!("move_ptr: {} -> {}", *current_ptr, target_ptr);
     if target_ptr > *current_ptr {
         for _ in 0..(target_ptr - *current_ptr) {
             bf_code.push('>');
@@ -641,10 +621,8 @@ fn add(
     }
     clear_range(bf_code, current_ptr, dest, 32);
     move_val(bf_code, current_ptr, register + 1, dest, 32);
-    // clear_range(bf_code, current_ptr, register, 66); // DISABLED
 }
 
-// move value from source to dest (destroy source)
 fn move_val(bf_code: &mut String, current_ptr: &mut u32, source: u32, dest: u32, size: u32) {
     bf_code.push_str(
         &(format!(
@@ -652,11 +630,9 @@ fn move_val(bf_code: &mut String, current_ptr: &mut u32, source: u32, dest: u32,
             source, dest, size, *current_ptr
         )
         .to_string()),
-    ); // Optional, but let's be consistent
+    );
     clear_range(bf_code, current_ptr, dest, size);
     for i in 0..size {
-        // move_ptr(bf_code, current_ptr, dest + i);
-        // bf_code.push_str("[-]"); // Clear dest
         move_ptr(bf_code, current_ptr, source + i);
         bf_code.push('[');
         bf_code.push('-');
