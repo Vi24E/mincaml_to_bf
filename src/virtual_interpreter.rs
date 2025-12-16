@@ -178,25 +178,20 @@ impl Simulator {
                     self.running = false;
                     eprintln!("DEBUG: Halt called"); // Optional debug
                 } else if name == "print_int" || name == "min_caml_print_int" {
-                    // Stack Convention for AppDir(print_int, [val, k]): [Val, K] (Top is K)
-                    // Pushed: Val (sp-64), K (sp-32)
+                    // Stack Layout: [K_Env...] [K_Label] [Val]
+                    // Top (SP-32): Val
+                    // Below (SP-64): K_Label
 
                     let sp_addr = prog.sp_addr;
                     let mut sp = self.read_int(sp_addr) as usize;
 
                     // Peek values
-                    // K is at top (sp-32)
-                    let k_tuple_ptr = self.read_int(sp - 32);
-                    // Val is at sp-64
-                    let val = self.read_int(sp - 64);
-
-                    // Dereference K Tuple to get Entry Label
-                    // K is a tuple [Entry, ...]. So mem[k_tuple_ptr] is Entry (Block Index).
-                    let k_label = self.read_int(k_tuple_ptr as usize);
+                    let val = self.read_int(sp - 32);
+                    let k_label = self.read_int(sp - 64);
 
                     eprintln!(
-                        "DEBUG: CallExternal print_int: Val={} K_Ptr={} K_Label={}",
-                        val, k_tuple_ptr, k_label
+                        "DEBUG: CallExternal print_int: Val={} K_Label={}",
+                        val, k_label
                     );
 
                     // Print
@@ -204,7 +199,7 @@ impl Simulator {
                     self.output
                         .extend_from_slice(format!("{}\n", val).as_bytes());
 
-                    // Pop arguments (Val, K) -> 2 * 32 = 64 bytes
+                    // Pop arguments (Val, K_Label) -> 64 bytes
                     sp -= 64;
 
                     // Call Continuation: K(Unit)

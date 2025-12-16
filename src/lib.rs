@@ -19,16 +19,24 @@ use intermediate::Layout;
 use r#virtual::Prog;
 
 pub fn compile_to_virtual(code: &str) -> Result<(Prog, Layout), String> {
+    eprintln!("DEBUG: Parsing...");
     let (_, syntax) = parser::parse(code).map_err(|e| format!("{:?}", e))?;
+    eprintln!("DEBUG: Typing...");
     let typed_syntax = typing::f(&syntax).map_err(|e| format!("{:?}", e))?;
+    eprintln!("DEBUG: K-Normalizing...");
     let k_norm = k_normal::f(&typed_syntax);
+    eprintln!("DEBUG: Alpha-converting...");
     let alpha_norm = alpha::f(&k_norm);
+    eprintln!("DEBUG: Closure Converting...");
     let closure_prog = closure::f(&alpha_norm);
+    eprintln!("DEBUG: CPS Converting...");
     let cps_prog = cps::f(&closure_prog);
-    //println!("DEBUG: CPS Prog:\n{}", cps_prog);
-    let blocked_prog = blocked::f(&cps_prog);
+    eprintln!("DEBUG: CPS Prog:\n{}", cps_prog);
+    eprintln!("DEBUG: Blocking...");
+    let blocked_prog = blocked::f(&cps_prog, &closure_prog);
+    eprintln!("DEBUG: Intermediate Converting...");
     let intermediate_prog = intermediate::f(&blocked_prog, &closure_prog);
-    eprintln!("DEBUG: Intermediate Prog:\n{}", intermediate_prog);
+    // eprintln!("DEBUG: Intermediate Prog:\n{}", intermediate_prog);
     use std::io::Write;
     std::io::stderr().flush().unwrap();
     let virtual_prog = r#virtual::f(&intermediate_prog);
@@ -41,8 +49,8 @@ pub fn compile_to_virtual(code: &str) -> Result<(Prog, Layout), String> {
 
 pub fn compile(code: &str) -> Result<(String, Prog, Layout), String> {
     let (virtual_prog, layout) = compile_to_virtual(code)?;
-    //println!("{}", virtual_prog);
-    eprintln!("DEBUG: Calling emit::f");
+    eprintln!("{}", virtual_prog);
+    // eprintln!("DEBUG: Calling emit::f");
     let bf_code = emit::f(&virtual_prog);
     eprintln!("DEBUG: Emit finished. Code length: {}", bf_code.len());
     Ok((bf_code, virtual_prog, layout))

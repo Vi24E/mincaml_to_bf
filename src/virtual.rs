@@ -22,7 +22,7 @@ pub enum Operation {
     // if x == 0 goto y
     Jump(u32),                 // Unconditional jump to block y
     JumpVar(u32),              // Jump to block index stored in variable x
-    MoveData(u32, u32, usize), // move and copy data from x to y, size is in bytes
+    MoveData(u32, u32, usize), // move and copy data from x to y, size is in bits
     CallExternal(String),      // Call external function (e.g. print_int)
     InputByte(u32),            // Read byte to address
     OutputByte(u32),           // Write byte from address
@@ -157,6 +157,12 @@ pub fn f(prog: &intermediate::Prog) -> Prog {
             &constants,
         );
         // DEBUG: Dump block info
+        // Dump var_map to check for collisions
+        let mut keys: Vec<_> = var_map.keys().collect();
+        keys.sort();
+        for k in keys {
+            eprintln!("DEBUG: var_map: {} -> {}", k, var_map.get(k).unwrap());
+        }
         blocks.push(Block { ops: ops });
     }
 
@@ -220,6 +226,10 @@ fn convert_term(
 ) {
     match term {
         Term::Let((x, _), atom, e) => {
+            if let Atom::Push(src) = atom {
+                eprintln!("DEBUG: Virtual Let x={} Atom=Push({})", x, src);
+            }
+            // else { eprintln!("DEBUG: Virtual Let x={} Atom={:?}", x, atom); }
             let dest_addr = (var_start + var_map.get(x).unwrap() * 32) as u32;
             convert_atom(
                 atom,

@@ -229,6 +229,9 @@ impl Converter {
     }
 
     fn bind_atom(&self, atom: Atom, dest: Option<(id::T, Type)>, next: Option<id::L>) -> Term {
+        if let Atom::Push(ref x) = atom {
+            eprintln!("DEBUG: bind_atom Push({}) dest={:?}", x, dest);
+        }
         match (dest, next) {
             (Some((x, t)), Some(next_l)) => Term::Let((x, t), atom, Box::new(Term::Jump(next_l))),
             (Some(_), None) => panic!("bind_atom: next label is None (Ret removed)"),

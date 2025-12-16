@@ -28,7 +28,7 @@ fn main() -> io::Result<()> {
         match mincaml_to_bf::compile_to_virtual(&code) {
             Ok((virtual_prog, _)) => {
                 let mut sim =
-                    mincaml_to_bf::virtual_interpreter::Simulator::new(&virtual_prog, 5000000);
+                    mincaml_to_bf::virtual_interpreter::Simulator::new(&virtual_prog, 10000000);
                 if let Err(e) = sim.run(&virtual_prog) {
                     eprintln!("Simulation Error: {}", e);
                 }
