@@ -4,9 +4,9 @@
 よかったら、他の記事も読んでくださると幸いです。
 
 # tl; dr
-- mincaml to brainfuckトランスコンパイラを作ったよ
+- MinCaml to Brainfuckトランスコンパイラを作ったよ
     - CPS変換 + Lambda Lifting + Defunctionalizationでスタックマシンで実行できる形式にすることで達成したよ
-    - brainfuckでランダムアクセスメモリーを再現した方がおそらく簡単だけど、今回は縛ったよ
+    - Brainfuckでランダムアクセスメモリーを再現した方がおそらく簡単だけど、今回は縛ったよ
 - 現在のAIでも、コンパイラを独立して書くこととesolangを書くことはできないっぽいよ
 - 期限が決まっているタイプのアドカレみたいな記事では、あらかじめ見通しを立ててない限り難しすぎるトピックに挑戦するべきタイミングではないよ
 
@@ -15,12 +15,12 @@
 理学部情報科学科には「CPU実験」という名物授業(実験)があります。
 この実験では、初めの授業で「このレイトレを動かせる様なコンピュータを作ってきてくれ」と野に放たれ、好き勝手にCPU作成に悪戦苦闘するものとなっています。
 班員は基本的に4人で構成され、ほとんどの班が「コア係」、「メモリ・FPU係」、「シミュレータ係」、「コンパイラ係」に役割を分担します。
-詳しい説明は本題とは逸れてしまうため、割愛しますが、コンパイラ係であるYutchyがふと「mincamlをbrainfuckにコンパイルできたら楽しいんじゃね？」と思って軽い気持ちで作成し始めた記事です。
+詳しい説明は本題とは逸れてしまうため、割愛しますが、コンパイラ係であるYutchyがふと「MinCamlをBrainfuckにコンパイルできたら楽しいんじゃね？」と思って軽い気持ちで作成し始めた記事です。
 
-結論から言うと、brainfuckを舐めすぎていました。[^1]: 
+結論から言うと、Brainfuckを舐めすぎていました。[^1]: 
 
 # 今回の目標
-Ocamlのサブセットであり、仕様のサイズが小さい関数型言語であるmincaml(のさらにサブセット)を、かの有名なesolangであるbrainfuckにコンパイルするトランスコンパイラの作成を目標とします。
+Ocamlのサブセットであり、仕様のサイズが小さい関数型言語であるMinCaml(のさらにサブセット)を、かの有名なesolangであるBrainfuckにコンパイルするトランスコンパイラの作成を目標とします。
 
 :::note warn
 部分関数を返す様な関数など、関数自体をオブジェクトとして扱うコードは未検証です。
@@ -29,19 +29,19 @@ Ocamlのサブセットであり、仕様のサイズが小さい関数型言語
 
 
 ### 具体的なレギュレーション
-- コンパイルするmincamlにはFloat, Tuple, Arrayが含まれないものとする
-- brainfuckの仕様は想定される最も厳しいものを想定します。[^2]
+- コンパイルするMinCamlにはFloat, Tuple, Arrayが含まれないものとする
+- Brainfuckの仕様は想定される最も厳しいものを想定します。[^2]
     - 各cellは127以下の非負整数値しか入れることができず、オーバーフローした時の処理は未定義
     - 0より小さいポインタにアクセスするのは未定義
     - テープ長は無制限とする[^3]
-- コンパイラはなるべくbrainfuckでランダムアクセスメモリをシミュレートしないようにする
+- コンパイラはなるべくBrainfuckでランダムアクセスメモリをシミュレートしないようにする
     - これをすると普通に実行をシミュレートするだけで、あまり面白くないので
 
 # 前提知識
-前提としてmincaml言語[^4]とbrainfuckについて軽い紹介と、mincaml処理系で既に行われている処理について軽く紹介します。
+前提としてMinCaml言語[^4]とBrainfuckについて軽い紹介と、MinCaml処理系で既に行われている処理について軽く紹介します。
 
-## mincaml言語
-関数が多言語であるOcamlのサブセットです。
+## MinCaml言語
+関数型言語であるOcamlのサブセットです。
 以下のような見た目をしています。
 
 ```ocaml
@@ -63,7 +63,7 @@ print_int (f y x) (* 100 *)
 
 
 であることを理解していれば問題ありません。
-その他mincamlに含まれないOcamlの仕様として、
+その他MinCamlに含まれないOcamlの仕様として、
 ```ocaml
 let partial_f = 
     (let rec f x y = x + y in f 42) (* 部分適用 *)
@@ -76,9 +76,9 @@ let y = (fun x -> x + 42) 57 (* 無名関数、y = 99 *)
 
 ことを把握していただけると、記事の理解がスムーズになると思います。[^5]
 
-詳しいmincaml言語の仕様は[MinCamlの構文と型](https://esumii.github.io/min-caml/)を参照してください。
+詳しいMinCaml言語の仕様は[MinCamlの構文と型](https://esumii.github.io/min-caml/)を参照してください。
 
-## brainfuck
+## Brainfuck
 `+-><[].,`のみからなる非常に使用サイズが小さい難解プログラミング言語(esolang)です。
 上記の文字以外はコメントとして無視されます。
 
@@ -99,8 +99,8 @@ let y = (fun x -> x + 42) 57 (* 無名関数、y = 99 *)
 しかし、特にループ`[]`が指しているポインタの値に依存しているため、ランダムアクセスが非常に難しいという問題があります。
 今回はこれを全力で回避していきます。[^6]
 
-## mincaml処理系
-mincaml処理系の最適化部分以外 + 独自で実装した[^7]A正規化までを前処理として使います。
+## MinCaml処理系
+MinCaml処理系の最適化部分以外 + 独自で実装した[^7]A正規化までを前処理として使います。
 具体的には、
 - 式のパース
 - 型検査
@@ -109,7 +109,7 @@ mincaml処理系の最適化部分以外 + 独自で実装した[^7]A正規化�
 - クロージャ変換[^8]
 
 を行なっています。
-といっても、普段からコンパイルを書かない方々にはなんのこっちゃだと思うので、重要な部分のみ軽く説明します。
+といっても、普段からコンパイラを書かない方々にはなんのこっちゃだと思うので、重要な部分のみ軽く説明します。
 
 ### K正規化
 ネストした式をなくすための正規化です。
@@ -145,16 +145,16 @@ let t1 = y + 57 in
 let x = t1 + 1
 ```
 の様に変換されます。ずいぶん読みやすくなりますね。
-コンパイラを書く際もA正規化すると場合分けが減るので、雑に適応しておいています。
+コンパイラを書く際もA正規化すると場合分けが減るので、雑に適用しておいています。
 
 # 本題
-本題のmincaml to brainfuck コンパイラで実装した部分を見ていきます。
+本題のMinCaml to Brainfuck コンパイラで実装した部分を見ていきます。
 
 ## バックエンド
 コンパイラを作る際は低レイヤー側から考えると良いらしいので、低レイヤー側から考えます。[^9]
 
-今回ゴールとするbrainfuckのコードは以下の様にし、
-```brainfuck
+今回ゴールとするBrainfuckのコードは以下の様にし、
+```Brainfuck
 +>+<[>[block1]>[block2]>[block3]>…[block_n]<<<…<<<]
 ```
 テープの構造を以下の様にします。
@@ -163,7 +163,7 @@ let x = t1 + 1
 ```
 といってもさっぱりだと思うので、詳しく解説していきます。
 
-brainfuckのコードは、疑似コードで書くと次の様な感じです。
+Brainfuckのコードは、疑似コードで書くと次の様な感じです。
 ```c
 mem[0] = 1
 mem[1] = 1
@@ -196,7 +196,7 @@ while (mem[0]){
 また、テープには127以下の数字しか入れることができないため、32個のcellをまとめて一つの整数を表現しています。これによって加算や値のコピーにかかる定数倍が32に抑えられるので、かなり嬉しいです。
 
 ## CPS変換
-brainfuckには制御構文が`[]`しかないため、関数の`return`を表現するのは難しいです。
+Brainfuckには制御構文が`[]`しかないため、関数の`return`を表現するのは難しいです。
 逆転の発想として、そもそも関数の`return`をなくせないでしょうか？
 
 これは「CPS変換」と呼ばれる方法によって、達成できます。
@@ -233,7 +233,7 @@ fib_alt 5 (fun x -> print_int x)
 ぱっと見だと複雑ですが、最後の呼び出し、`fib_alt 5 (fun x -> print_int x)`を見ればなんとなく意味がわかるのではないでしょうか？
 これはつまり、fib_altを読んだあとは、その数をprintしてね、というのを関数の引数として明示的に渡しています。
 
-mincamlには無名関数が存在しないので、これを解消すると、
+MinCamlには無名関数が存在しないので、これを解消すると、
 ```ocaml:fib_alt_cpsed.ml
 let k = 42 in
 let rec fib_alt n cont =
@@ -268,30 +268,30 @@ let rec fib_alt k n cont =
   if n <= 1 then cont n
   else 
     let g n k fib_alt cont x = 
-      let h　k x cont y = 
+      let h k x cont y = 
         let t = x + y + k in
         cont (t + t)
       in
-      fib_alt (n - 2) (h n k x cont)
+      fib_alt k (n - 2) (h k x cont)
     in
-    fib_alt (n - 1) (g n k fib_alt cont)
+    fib_alt k (n - 1) (g n k fib_alt cont)
 in 
 let rec print x = print_int x in
 fib_alt k 5 print
 ```
 となり、関数をトップレベルまで引き上げると、
 ```ocaml:fib_alt_lambda_lifted.ml
-let g n k fib_alt cont x = 
-  fib_alt (n - 2) (h k x cont)
-in
 let h k x cont y = 
   let t = x + y + k in
   cont (t + t)
 in
+let g n k fib_alt cont x = 
+  fib_alt k (n - 2) (h k x cont)
+in
 let k = 42 in
 let rec fib_alt k n cont =
   if n <= 1 then cont n
-  else fib_alt (n - 1) (g n k fib_alt cont)
+  else fib_alt k (n - 1) (g n k fib_alt cont)
 in 
 let rec print x = print_int x in
 fib_alt k 5 print
@@ -302,23 +302,23 @@ fib_alt k 5 print
 ## defunctionalization / Trampoline
 `fib_alt_lambda_lifted.ml`の関数になっている部分を全てlabelによるジャンプに書き換えます。
 
-ここで重要な事実として、CPS変換されており、継続が最後の段階でしか呼ばれていないプログラム(Liniar Continuation)は純スタックマシンによって実行可能であることです。
+ここで重要な事実として、CPS変換されており、継続が最後の段階でしか呼ばれていないプログラム(Linear Continuation)は純スタックマシンによって実行可能であることです。
 
 これは継続以外の関数は明示的にスタックに積み、継続はスタックの残りを用いて処理を行う様にすると達成されます。
 
 例えば、
 ```ocaml:fib_alt_lambda_lifted.ml
-let g n k fib_alt cont x = 
-  fib_alt (n - 2) (h k x cont)
-in
 let h k x cont y = 
   let t = x + y + k in
   cont (t + t)
 in
+let g n k fib_alt cont x = 
+  fib_alt k (n - 2) (h k x cont)
+in
 let k = 42 in
 let rec fib_alt k n cont =
   if n <= 1 then cont n
-  else fib_alt (n - 1) (g n k fib_alt cont)
+  else fib_alt k (n - 1) (g n k fib_alt cont)
 in 
 let rec print x = print_int x in
 fib_alt k 5 print
@@ -431,24 +431,33 @@ print   |
 上図のように継続を部分適応部分の最後におくことで、スタックの下側を自然にcontとしている点です。これは継続を1度のみ使うLiniar Continuationの強みで、これによってスタックマシンによる再帰の実行が可能となります。
 
 これを踏まえて関数の変換を行うと、
-```ocaml
-let g n k fib_alt cont x = 
-  fib_alt (n - 2) (h k x cont)
-in
+```ocaml:fib_alt_lambda_lifted.ml
 let h k x cont y = 
   let t = x + y + k in
   cont (t + t)
 in
+let g n k fib_alt cont x = 
+  fib_alt k (n - 2) (h k x cont)
+in
 let k = 42 in
 let rec fib_alt k n cont =
   if n <= 1 then cont n
-  else fib_alt (n - 1) (g n k fib_alt cont)
+  else fib_alt k (n - 1) (g n k fib_alt cont)
 in 
 let rec print x = print_int x in
 fib_alt k 5 print
 ```
 は、
 ```c
+h:
+    y = pop()
+    cont = pop()
+    x = pop()
+    k = pop()
+    t = x + y + k
+    push(t + t)
+    jump(cont)
+
 g:
     x = pop()
     cont = pop()
@@ -461,15 +470,6 @@ g:
     push(h)
     push(n - 2)
     jump("fib_alt")
-
-h:
-    y = pop()
-    cont = pop()
-    x = pop()
-    k = pop()
-    t = x + y + k
-    push(t + t)
-    jump(cont)
 
 fib_alt:
     cont = pop()
@@ -506,11 +506,11 @@ main:
 のように、非常にシンプルな形で記述できました。[^13]
 
 ## その後
-あとはbrainfuckでそれぞれの命令を記述するだけです！
+あとはBrainfuckでそれぞれの命令を記述するだけです！
 頑張りましょう！[^14]
 
 # あとがき
-brainfuckトランスコンパイラと言いながら、ランダムアクセスメモリを縛ったことで、実質的にスタックマシンへのコンパイルが主になりました。自分はdcも好んで使っているので、もしかしたらスタックマシンが好きなのかもしれません。
+Brainfuckトランスコンパイラと言いながら、ランダムアクセスメモリを縛ったことで、実質的にスタックマシンへのコンパイルが主になりました。自分はdcも好んで使っているので、もしかしたらスタックマシンが好きなのかもしれません。
 
 さて、あとがきを書いている時点(12月16日の昼間)でも、まだ実装が終わっていません。
 アドカレの記事を書くときには、まずちゃんと工数を見積もってからプロジェクトを決めましょう。[^15]
@@ -522,33 +522,21 @@ brainfuckトランスコンパイラと言いながら、ランダムアクセ�
 ここまでお読みいただきありがとうございます。
 
 # 作成したものがこちらになります
-https://github.com/Vi24E/mincaml_to_bf
+https://github.com/Vi24E/MinCaml_to_bf
 
 
 シミュレータの動作ですが、無事`fib_alt`で`2144`が計算されたことが確認できます。[^16][^17]
 ![image.png](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/2354884/3bed85b3-34f3-4b85-8244-e448524d0570.png)
 
-<details open><summary> サンプルコード(fib(10)) </summary>
-
-```brainfuck:fib.bf
-insert brainfuck code here
-```
-</details>
-
-<details open><summary> サンプルコード(fib_alt(5)) </summary>
-
-```brainfuck:fib_alt.bf
-insert brainfuck code here
-```
-</details>
+サンプルコードは膨大(~数十MB)なので、githubの方からご覧ください。
 
 # 最後に
-このプロジェクトを始めてから体感50%くらいでbrainfuckの悪夢を見る様になりました、助けてください
+このプロジェクトを始めてから体感50%くらいでBrainfuckの悪夢を見る様になりました、助けてください
 
 [^1]: なんとこれを書いている12月15日現在、いまだにコンパイラのデバッグが終わっていません
 [^2]: コンパイラで生成されたコードが環境依存していると嫌なので
 [^3]: そうでないとチューリング完全でないので甘めに無制限としています。なおある程度のコードはテープ長30000以下でおさまります。
-[^4]: mincamlがOcamlのサブセット言語としての呼び名と、[mincaml処理系](https://esumii.github.io/min-caml/)としての呼び名でオーバーロードされているため、誤解が生じる際は以下mincaml言語とmincaml処理系と書き分けます。
+[^4]: MinCamlがOcamlのサブセット言語としての呼び名と、[MinCaml処理系](https://esumii.github.io/min-caml/)としての呼び名でオーバーロードされているため、誤解が生じる際は以下MinCaml言語とMinCaml処理系と書き分けます。
 [^5]: 最適化途中の疑似コードとして使用する機会があるので
 [^6]: おそらくランダムアクセスを全力で回避するより、ランダムアクセスを実装した方が間違いなく簡単です。今回は面白さのために全力で回避します。
 [^7]: 最適化パイプラインにもassoc.mlが存在して、A変換を行なっていますが、これは最適化パイプライン内なので改めて書いています。
@@ -561,4 +549,4 @@ insert brainfuck code here
 [^14]: 頑張りました
 [^15]: 理論が間違っていて、工数を見間違えたのが原因ではありましたが...
 [^16]: printなどは力尽きたので後日...
-[^17]: 12月16日20時42分に実装完了しました
+[^17]: 12月16日21時44分に実装完了しました
